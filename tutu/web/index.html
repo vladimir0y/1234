@@ -55,13 +55,23 @@
       <aside class="sidebar">
         <details open class="panel">
           <summary>Модель тіла</summary>
-          <div class="row">
-            <select id="demo-model" aria-label="Демо-модель"></select>
+          <div class="seg seg-wide" role="group" aria-label="Стать">
+            <button data-sex="male">Чоловіче</button>
+            <button data-sex="female">Жіноче</button>
           </div>
-          <label class="file-btn">Завантажити скан (OBJ, GLB, PLY, STL)
-            <input id="mesh-file" type="file" accept=".obj,.glb,.gltf,.ply,.stl" hidden />
-          </label>
+          <div id="body-presets" class="body-presets"></div>
+          <label class="slider slider-wide">Зріст <input id="body-height" type="range" min="145" max="205" value="176" /><output id="body-height-out">176 см</output></label>
+          <div class="row">
+            <select id="demo-model" aria-label="Окрема частина тіла"><option value="">Крупний план частини тіла…</option></select>
+          </div>
           <p id="model-info" class="muted"></p>
+          <details class="sub">
+            <summary>Свій скан (додатково)</summary>
+            <p class="muted">LiDAR-сканування доступне в iOS-застосунку на iPhone/iPad Pro. Або завантажте готовий 3D-файл.</p>
+            <label class="file-btn">Завантажити 3D-файл (OBJ, GLB, PLY, STL)
+              <input id="mesh-file" type="file" accept=".obj,.glb,.gltf,.ply,.stl" hidden />
+            </label>
+          </details>
         </details>
 
         <details open class="panel">

@@ -5,5 +5,6 @@ export default defineConfig({
     host: true,
     proxy: { "/api": "http://127.0.0.1:8000" },
   },
-  build: { chunkSizeWarningLimit: 1500 },
+  // No source maps in production: the shipped JS stays minified only.
+  build: { chunkSizeWarningLimit: 1500, sourcemap: false },
 });

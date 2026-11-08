@@ -12,20 +12,26 @@ struct HomeView: View {
             List {
                 Section {
                     Button {
-                        showScanner = true
-                    } label: {
-                        Label("Нове сканування", systemImage: "camera.metering.matrix")
-                            .font(.headline)
-                    }
-                    if !BodyScanner.isSupported {
-                        Text("Для сканування потрібен iPhone/iPad з LiDAR (моделі Pro). Можна відкрити редактор з демо-моделлю.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
-                    Button {
                         editorScanID = ""
                     } label: {
-                        Label("Редактор з демо-моделлю", systemImage: "paintbrush.pointed")
+                        Label("Почати з базового тіла", systemImage: "figure.stand")
+                            .font(.headline)
+                    }
+                    Text("5 чоловічих і 5 жіночих статур, зріст налаштовується. Скан не потрібен.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+
+                Section("Додатково: власний скан") {
+                    if BodyScanner.isSupported {
+                        Button {
+                            showScanner = true
+                        } label: {
+                            Label("LiDAR-сканування тіла", systemImage: "camera.metering.matrix")
+                        }
+                    } else {
+                        Label("Потрібен iPhone/iPad з LiDAR (моделі Pro)", systemImage: "camera.metering.unknown")
+                            .foregroundStyle(.secondary)
                     }
                 }
 

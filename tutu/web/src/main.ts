@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { api } from "./api";
+import { BODY_PRESETS, findPreset, type BodyParams, type Sex } from "./core/bodyModels";
 import { DEMO_MODELS, type DemoModelId } from "./core/demoModels";
 import { extensionOf, MESH_EXTENSIONS, parseMesh, prepareBody } from "./core/loaders";
 import { setPngDpi } from "./core/png";
@@ -13,17 +14,18 @@ const $$ = <T extends HTMLElement = HTMLElement>(sel: string) => [...document.qu
 
 // ---------------------------------------------------------------------------
 // State
-type ModelSource = { type: "demo"; id: DemoModelId } | { type: "scan"; id: string } | { type: "file"; name: string };
+type BodyModel = { type: "body"; preset: string; height: number };
+type ModelSource = BodyModel | { type: "demo"; id: DemoModelId } | { type: "scan"; id: string } | { type: "file"; name: string };
 
 interface ProjectState {
-  model: { type: "demo"; id: DemoModelId } | { type: "scan"; id: string };
+  model: BodyModel | { type: "demo"; id: DemoModelId } | { type: "scan"; id: string };
   selection: number[]; // run-length encoded [start, length, ...]
   layers: ReturnType<UnwrapEditor["serialize"]>;
 }
 
 const viewer = new Viewer($("#viewport"));
 const editor = new UnwrapEditor($("#unwrap"));
-let model: ModelSource = { type: "demo", id: "forearm" };
+let model: ModelSource = { type: "body", preset: "m-average", height: 1.76 };
 let rawFile: { data: ArrayBuffer; name: string } | null = null;
 let projectId: string | null = new URLSearchParams(location.search).get("project");
 let texture: THREE.CanvasTexture | null = null;
@@ -101,9 +103,57 @@ async function loadGeometry(geometry: THREE.BufferGeometry, label: string) {
     `${faces.toLocaleString("uk")} трикутників` + (prepared.unit !== "m" ? ` (одиниці файлу: ${prepared.unit})` : "");
 }
 
+// --- Base bodies (generated in a worker, cached)
+const bodyWorker = new Worker(new URL("./body.worker.ts", import.meta.url), { type: "module" });
+let bodyJob = 0;
+type RawMesh = { positions: Float32Array; indices: Uint32Array };
+const bodyCache = new Map<string, RawMesh>();
+function generateBody(params: BodyParams): Promise<RawMesh> {
+  const key = JSON.stringify(params);
+  const cached = bodyCache.get(key);
+  if (cached) return Promise.resolve(cached);
+  const id = ++bodyJob;
+  return new Promise((resolve, reject) => {
+    const onMsg = (e: MessageEvent<{ id: number; mesh?: RawMesh; error?: string }>) => {
+      if (e.data.id !== id) return;
+      bodyWorker.removeEventListener("message", onMsg);
+      if (e.data.error) return reject(new Error(e.data.error));
+      bodyCache.set(key, e.data.mesh!);
+      resolve(e.data.mesh!);
+    };
+    bodyWorker.addEventListener("message", onMsg);
+    bodyWorker.postMessage({ id, params });
+  });
+}
+
+let bodyRequest = 0;
+async function loadBody(presetId: string, height?: number) {
+  const preset = findPreset(presetId) ?? BODY_PRESETS[1];
+  const h = height ?? preset.params.height;
+  model = { type: "body", preset: preset.id, height: h };
+  rawFile = null;
+  syncBodyUI();
+  const request = ++bodyRequest;
+  const overlay = document.createElement("div");
+  overlay.className = "loading-overlay";
+  overlay.textContent = "Створюю модель тіла…";
+  $("#viewport").appendChild(overlay);
+  try {
+    const mesh = await generateBody({ ...preset.params, height: h });
+    if (request !== bodyRequest) return; // the user already picked another body
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(mesh.positions.slice(), 3));
+    g.setIndex(new THREE.BufferAttribute(mesh.indices.slice(), 1));
+    await loadGeometry(g, `${preset.params.sex === "male" ? "Чоловіче" : "Жіноче"} · ${preset.label}`);
+  } finally {
+    overlay.remove();
+  }
+}
+
 async function loadDemo(id: DemoModelId) {
   model = { type: "demo", id };
   rawFile = null;
+  syncBodyUI();
   await loadGeometry(DEMO_MODELS[id].build(), DEMO_MODELS[id].label);
 }
 
@@ -119,6 +169,7 @@ async function loadScan(id: string) {
   const data = await api.scanMesh(id);
   rawFile = null;
   await loadMeshData(data, `scan.${meta.format}`, { type: "scan", id });
+  syncBodyUI();
   $("#model-info").textContent = `${meta.name} · ` + $("#model-info").textContent;
 }
 
@@ -416,8 +467,62 @@ $("#export-shot").addEventListener("click", async () => {
 // ---------------------------------------------------------------------------
 // Model panel
 const demoSelect = $<HTMLSelectElement>("#demo-model");
-for (const [id, m] of Object.entries(DEMO_MODELS)) demoSelect.add(new Option(`Демо: ${m.label}`, id));
-demoSelect.addEventListener("change", () => loadDemo(demoSelect.value as DemoModelId).catch((e) => toast(e.message, true)));
+for (const [id, m] of Object.entries(DEMO_MODELS)) demoSelect.add(new Option(m.label, id));
+demoSelect.addEventListener("change", () => {
+  if (demoSelect.value) loadDemo(demoSelect.value as DemoModelId).catch((e) => toast(e.message, true));
+});
+
+let currentSex: Sex = "male";
+const heightInput = $<HTMLInputElement>("#body-height");
+
+function silhouette(p: BodyParams): string {
+  const f = p.sex === "female";
+  const sh = 15 * p.shoulders * (f ? 0.9 : 1);
+  const w = 11 * p.waist * (f ? 0.85 : 1) * (p.belly > 1.3 ? 1.12 : 1);
+  const hp = 13 * p.hips * (f ? 1.12 : 1);
+  const a = 3.2 * p.arms;
+  const l = 5.5 * p.legs;
+  return `<svg viewBox="0 0 60 100" aria-hidden="true"><path d="
+    M${30 - sh} 22 Q30 17 ${30 + sh} 22 L${30 + w} 44 Q${30 + hp + 1} 52 ${30 + hp} 56
+    L${30 + 3 + l} 96 L${30 + 1} 96 L30 60 L${30 - 1} 96 L${30 - 3 - l} 96 L${30 - hp} 56
+    Q${30 - hp - 1} 52 ${30 - w} 44 Z"/>
+    <path d="M${30 - sh} 22 L${30 - sh - 9} 54 L${30 - sh - 9 + a} 55 L${30 - sh + a} 30 Z"/>
+    <path d="M${30 + sh} 22 L${30 + sh + 9} 54 L${30 + sh + 9 - a} 55 L${30 + sh - a} 30 Z"/>
+    <path d="M30 2 a6.5 8 0 1 0 0.01 0 Z M27 16 h6 v6 h-6 Z"/></svg>`;
+}
+
+function syncBodyUI() {
+  if (model.type === "body") {
+    currentSex = findPreset(model.preset)?.params.sex ?? currentSex;
+    heightInput.value = String(Math.round(model.height * 100));
+    $("#body-height-out").textContent = `${heightInput.value} см`;
+  }
+  $$<HTMLButtonElement>("[data-sex]").forEach((b) => b.classList.toggle("active", b.dataset.sex === currentSex));
+  const box = $("#body-presets");
+  box.innerHTML = "";
+  for (const preset of BODY_PRESETS.filter((p) => p.params.sex === currentSex)) {
+    const b = document.createElement("button");
+    b.title = preset.description;
+    b.innerHTML = `${silhouette(preset.params)}<span>${preset.label}</span>`;
+    b.classList.toggle("active", model.type === "body" && model.preset === preset.id);
+    b.addEventListener("click", () => loadBody(preset.id).catch((e) => toast(e.message, true)));
+    box.appendChild(b);
+  }
+  if (model.type !== "demo") demoSelect.value = "";
+}
+
+$$<HTMLButtonElement>("[data-sex]").forEach((b) =>
+  b.addEventListener("click", () => {
+    currentSex = b.dataset.sex as Sex;
+    const preset = BODY_PRESETS.find((p) => p.params.sex === currentSex && p.id.endsWith("average"))!;
+    loadBody(preset.id).catch((e) => toast(e.message, true));
+  }),
+);
+heightInput.addEventListener("input", () => ($("#body-height-out").textContent = `${heightInput.value} см`));
+heightInput.addEventListener("change", () => {
+  const presetId = model.type === "body" ? model.preset : BODY_PRESETS.find((p) => p.params.sex === currentSex)!.id;
+  loadBody(presetId, Number(heightInput.value) / 100).catch((e) => toast(e.message, true));
+});
 
 $<HTMLInputElement>("#mesh-file").addEventListener("change", async (e) => {
   const file = (e.target as HTMLInputElement).files?.[0];
@@ -428,7 +533,7 @@ $<HTMLInputElement>("#mesh-file").addEventListener("change", async (e) => {
     const data = await file.arrayBuffer();
     await loadMeshData(data, file.name, { type: "file", name: file.name });
     rawFile = { data, name: file.name };
-    demoSelect.selectedIndex = -1;
+    syncBodyUI();
   } catch (err) {
     toast((err as Error).message, true);
   }
@@ -445,7 +550,7 @@ $("#save").addEventListener("click", async () => {
       model = { type: "scan", id: scan.id };
     }
     const state: ProjectState = {
-      model: model.type === "file" ? { type: "demo", id: "forearm" } : model,
+      model: model.type === "file" ? { type: "body", preset: "m-average", height: 1.76 } : model,
       selection: rle([...viewer.selection].sort((a, b) => a - b)),
       layers: editor.serialize(),
     };
@@ -466,6 +571,7 @@ async function openProject(id: string) {
   $<HTMLInputElement>("#project-name").value = p.name;
   const m = p.state.model;
   if (m.type === "scan") await loadScan(m.id);
+  else if (m.type === "body") await loadBody(m.preset, m.height);
   else if (m.type === "demo") {
     demoSelect.value = m.id;
     await loadDemo(m.id);
@@ -487,6 +593,7 @@ $$<HTMLButtonElement>(".tabs button").forEach((b) =>
 // ---------------------------------------------------------------------------
 // Bridge for the iOS app: window.tutu.loadMeshBase64(b64, "scan.obj")
 (window as unknown as { tutu: unknown }).tutu = {
+  loadBody,
   async loadMeshBase64(b64: string, filename: string) {
     const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
     rawFile = { data: bin.buffer, name: filename };
@@ -503,10 +610,10 @@ async function boot() {
   try {
     if (projectId) await openProject(projectId);
     else if (params.get("scan")) await loadScan(params.get("scan")!);
-    else await loadDemo("forearm");
+    else await loadBody(params.get("body") ?? "m-average");
   } catch (err) {
     toast((err as Error).message, true);
-    await loadDemo("forearm");
+    await loadBody("m-average");
   }
   api
     .health()

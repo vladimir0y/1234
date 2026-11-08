@@ -22,7 +22,6 @@ targets:
         INFOPLIST_KEY_NSCameraUsageDescription: "Камера і LiDAR потрібні, щоб створити 3D-модель тіла для примірки тату."
         INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Підключення до сервера Tutu у вашій мережі."
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
-        INFOPLIST_KEY_UIRequiredDeviceCapabilities: arkit
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
     info:
       path: Tutu/Resources/Info.plist
