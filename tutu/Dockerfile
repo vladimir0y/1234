@@ -17,4 +17,5 @@ RUN useradd --create-home tutu && mkdir -p /data && chown tutu /data
 USER tutu
 VOLUME /data
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+# One worker: generation jobs live in process memory until the Redis queue lands.
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1"]

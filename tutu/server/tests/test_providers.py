@@ -65,7 +65,26 @@ def test_pollinations_key_and_limits():
     assert run(PollinationsProvider("pk", transport=httpx.MockTransport(ok)).generate(REQ)) == b"JPEG"
     limited = httpx.MockTransport(lambda r: httpx.Response(402, json={"error": {"code": "FREE_LIMIT"}}))
     with pytest.raises(RateLimited):
-        run(PollinationsProvider(None, transport=limited).generate(REQ))
+        run(PollinationsProvider(None, transport=limited, max_wait=0).generate(REQ))
+
+
+def test_pollinations_waits_out_anonymous_limit(monkeypatch):
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return httpx.Response(402, text='{"message":"Free limit reached. Retry after 3s"}')
+        return httpx.Response(200, content=b"JPEG", headers={"content-type": "image/jpeg"})
+
+    slept = []
+
+    async def fake_sleep(s):
+        slept.append(s)
+
+    monkeypatch.setattr("app.providers.pollinations.asyncio.sleep", fake_sleep)
+    assert run(PollinationsProvider(None, transport=httpx.MockTransport(handler)).generate(REQ)) == b"JPEG"
+    assert slept == [4]
 
 
 def test_horde_async_flow():

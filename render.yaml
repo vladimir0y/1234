@@ -1,0 +1,23 @@
+# Render Blueprint: one free web service with the Tutu app (API + editor).
+# Deploy: https://render.com/deploy?repo=https://github.com/vladimir0y/1234
+services:
+  - type: web
+    name: tutu
+    runtime: docker
+    plan: free
+    branch: claude/tutu-project-plan-6f5mg6
+    rootDir: tutu
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: "8000"
+      # Free generator without keys (watermark, 1 image / 45 s) — good for testing.
+      - key: TUTU_POLLINATIONS_ANON
+        value: "1"
+      # Better free generator: Cloudflare FLUX (fill in on Render, optional).
+      - key: CLOUDFLARE_ACCOUNT_ID
+        sync: false
+      - key: CLOUDFLARE_API_TOKEN
+        sync: false

@@ -41,6 +41,17 @@ npm run dev          # http://localhost:5173, /api проксіюється на
 Моделі тіла будуються з `server/app/body/assets/makehuman_body.npz` (ресурси MakeHuman, CC0).
 Перезібрати пакет: `python server/scripts/build_body_assets.py <mpfb2>/src/mpfb/data`.
 
+### Постійне посилання (безкоштовно, Render)
+
+1. Відкрийте https://render.com/deploy?repo=https://github.com/vladimir0y/1234 і увійдіть через GitHub
+   (для приватного репозиторію дайте Render доступ до `1234`).
+2. Натисніть **Apply** — Render збере `tutu/Dockerfile` за `render.yaml`.
+3. Через 5–10 хв з'явиться адреса `https://tutu-xxxx.onrender.com`.
+
+Безкоштовний сервер засинає без відвідувань (перше відкриття ~1 хв), а збережені проєкти
+зникають при перезапуску. Для кращих ескізів додайте в Render → Environment `CLOUDFLARE_ACCOUNT_ID`
+і `CLOUDFLARE_API_TOKEN` (див. [docs/RESEARCH.md](docs/RESEARCH.md)).
+
 ### ШІ-генерація
 
 Без налаштувань працює офлайн-заглушка (для розробки). Безкоштовні справжні ескізи —
