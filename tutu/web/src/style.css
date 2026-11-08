@@ -179,3 +179,6 @@ textarea { width: 100%; resize: vertical; }
 .swatch { width: 26px; height: 26px; padding: 0; border-radius: 50%; border: 2px solid transparent; }
 .swatch.active { border-color: var(--accent); }
 .layer-actions { display: flex; gap: 6px; }
+
+#projects { max-width: 180px; }
+@media (max-width: 760px) { #projects { max-width: 110px; } }

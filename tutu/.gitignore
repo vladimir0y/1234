@@ -9,3 +9,6 @@ __pycache__/
 ios/*.xcodeproj
 ios/Tutu/Resources/Info.plist
 .DS_Store
+web/dist-standalone/
+web/dist-artifact/
+web/standalone/body-model.bin

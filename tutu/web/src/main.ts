@@ -1,5 +1,6 @@
 import * as THREE from "three";
-import { api, bodyApi, type BodyMeshData, type BodyPreset, type BodyPresetParams } from "./api";
+import { api, type BodyMeshData, type BodyPreset, type BodyPresetParams } from "./api";
+import { createBackend, STANDALONE, type Backend } from "./backend";
 import { extensionOf, MESH_EXTENSIONS, parseMesh, prepareBody } from "./core/loaders";
 import { setPngDpi } from "./core/png";
 import { acceptedComponents, buildFaceAdjacency, connectedComponents, extractPatch, smoothSelection } from "./core/topology";
@@ -46,21 +47,15 @@ function toast(msg: string, error = false) {
   toastTimer = window.setTimeout(() => el.classList.remove("show"), error ? 5000 : 2600);
 }
 
-function download(blob: Blob, filename: string) {
-  // Inside the iOS app the native side saves files (WKWebView has no downloads).
-  const native = (window as unknown as { webkit?: { messageHandlers?: { tutu?: { postMessage(m: unknown): void } } } })
-    .webkit?.messageHandlers?.tutu;
-  if (native) {
-    const reader = new FileReader();
-    reader.onload = () => native.postMessage({ type: "file", filename, dataURL: reader.result });
-    reader.readAsDataURL(blob);
-    return;
+let backend: Backend;
+
+async function download(blob: Blob, filename: string) {
+  try {
+    await backend.download(blob, filename);
+  } catch (e) {
+    const err = e as { code?: string; message?: string };
+    if (err.code !== "declined") toast(`Файл не збережено: ${err.message ?? err.code}`, true);
   }
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
 const loadImage = (src: string) =>
@@ -149,7 +144,7 @@ async function loadBody(presetId: string, overrides: Partial<BodyPresetParams> =
     const key = JSON.stringify([preset.id, overrides]);
     let mesh = bodyCache.get(key);
     if (!mesh) {
-      mesh = await bodyApi.mesh(preset.id, overrides);
+      mesh = await backend.bodyMesh(preset.id, overrides);
       bodyCache.set(key, mesh);
     }
     if (request !== bodyRequest) return; // superseded by a newer choice
@@ -179,12 +174,10 @@ async function loadMeshData(data: ArrayBuffer, filename: string, source: ModelSo
 }
 
 async function loadScan(id: string) {
-  const meta = await api.scanMeta(id);
-  const data = await api.scanMesh(id);
+  const mesh = await backend.loadSavedMesh(id);
   rawFile = null;
-  await loadMeshData(data, `scan.${meta.format}`, { type: "scan", id });
+  await loadMeshData(mesh.data, mesh.name, { type: "scan", id });
   syncBodyUI();
-  $("#model-info").textContent = `${meta.name} · ` + $("#model-info").textContent;
 }
 
 // ---------------------------------------------------------------------------
@@ -499,7 +492,7 @@ for (const m of MOTIFS) {
 }
 
 async function loadGenerators() {
-  const [styles, providers] = await Promise.all([api.styles(), api.providers()]);
+  const [styles, providers] = await Promise.all([backend.styles(), backend.providers()]);
   styleSelect.innerHTML = "";
   for (const s of styles) styleSelect.add(new Option(`${s.label}${s.mode === "color" ? " · колір" : ""}`, s.id));
   providerSelect.innerHTML = "";
@@ -544,7 +537,7 @@ $("#generate").addEventListener("click", async () => {
   };
   try {
     const { width, height } = editor.size;
-    const job = await api.generate(
+    const job = await backend.generate(
       {
         prompt,
         style: styleSelect.value,
@@ -730,9 +723,12 @@ $("#save").addEventListener("click", async () => {
   const btn = $<HTMLButtonElement>("#save");
   btn.disabled = true;
   try {
+    const name = $<HTMLInputElement>("#project-name").value || "Без назви";
     if (model.type === "file" && rawFile) {
-      const scan = await api.uploadScan(new Blob([rawFile.data]), rawFile.name, rawFile.name);
-      model = { type: "scan", id: scan.id };
+      // Keep the user's own 3D file with the project.
+      const first = await backend.saveProject(projectId, { name, state: {}, mesh: rawFile });
+      projectId = first.id;
+      model = { type: "scan", id: first.meshRef! };
     }
     const state: ProjectState = {
       model: model.type === "file" ? { type: "body", preset: "m-average", overrides: {} } : model,
@@ -740,10 +736,10 @@ $("#save").addEventListener("click", async () => {
       up: unwrapUp,
       layers: editor.serialize(),
     };
-    const name = $<HTMLInputElement>("#project-name").value || "Без назви";
-    const saved = await api.saveProject(projectId, { name, scan_id: model.type === "scan" ? model.id : null, state });
+    const saved = await backend.saveProject(projectId, { name, state });
     projectId = saved.id;
-    history.replaceState(null, "", `?project=${saved.id}`);
+    if (!STANDALONE) history.replaceState(null, "", `?project=${saved.id}`);
+    refreshProjectList();
     dirty = false;
     toast("Проєкт збережено");
   } catch (err) {
@@ -754,7 +750,8 @@ $("#save").addEventListener("click", async () => {
 });
 
 async function openProject(id: string) {
-  const p = await api.loadProject<ProjectState>(id);
+  const p = await backend.loadProject<ProjectState>(id);
+  projectId = p.id;
   $<HTMLInputElement>("#project-name").value = p.name;
   const m = p.state.model;
   if (m.type === "scan") await loadScan(m.id);
@@ -764,6 +761,37 @@ async function openProject(id: string) {
   await unwrapSelection();
   await editor.deserialize(p.state.layers);
 }
+
+async function refreshProjectList() {
+  const sel = $<HTMLSelectElement>("#projects");
+  const items = await backend.listProjects().catch(() => []);
+  sel.innerHTML = "";
+  sel.add(new Option(items.length ? `Мої проєкти (${items.length})` : "Немає збережених", ""));
+  for (const p of items) sel.add(new Option(`${p.name} · ${new Date(p.updated).toLocaleDateString("uk")}`, p.id));
+  sel.disabled = !items.length;
+}
+$<HTMLSelectElement>("#projects").addEventListener("change", async (e) => {
+  const sel = e.target as HTMLSelectElement;
+  const id = sel.value;
+  sel.value = "";
+  if (!id) return;
+  try {
+    await openProject(id);
+    dirty = false;
+    toast("Проєкт відкрито");
+  } catch (err) {
+    toast((err as Error).message, true);
+  }
+});
+$("#new-project").addEventListener("click", async () => {
+  projectId = null;
+  $<HTMLInputElement>("#project-name").value = "Новий проєкт";
+  editor.clearAll();
+  viewer.clearSelection();
+  await unwrapSelection();
+  if (!STANDALONE) history.replaceState(null, "", location.pathname);
+  dirty = false;
+});
 
 // ---------------------------------------------------------------------------
 // Mobile tabs
@@ -789,13 +817,16 @@ $$<HTMLButtonElement>(".tabs button").forEach((b) =>
 // ---------------------------------------------------------------------------
 // Boot
 async function boot() {
+  backend = await createBackend();
+  document.body.classList.toggle("standalone", STANDALONE);
   renderLayers();
   const params = new URLSearchParams(location.search);
   try {
-    presets = await bodyApi.presets();
+    presets = await backend.presets();
   } catch {
     toast("Сервер недоступний: базові тіла не завантажено. Можна відкрити свій 3D-файл.", true);
   }
+  refreshProjectList();
   syncBodyUI();
   try {
     if (projectId) await openProject(projectId);

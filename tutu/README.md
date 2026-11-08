@@ -41,6 +41,17 @@ npm run dev          # http://localhost:5173, /api проксіюється на
 Моделі тіла будуються з `server/app/body/assets/makehuman_body.npz` (ресурси MakeHuman, CC0).
 Перезібрати пакет: `python server/scripts/build_body_assets.py <mpfb2>/src/mpfb/data`.
 
+### Версія без сервера (claude.ai)
+
+Редактор уміє працювати повністю в браузері: тіла рахуються локально, ескізи малює Claude (SVG),
+проєкти зберігаються в браузері. Так він опублікований як сторінка claude.ai:
+https://claude.ai/artifact/KBtKNrK2z9rW6suxdHvqXL (приватна, відкривається з вашого акаунта).
+
+```bash
+python server/scripts/export_body_bin.py   # дані тіла для браузера
+cd web && npm run build:artifact           # -> web/dist-artifact/
+```
+
 ### Постійне посилання (безкоштовно, Render)
 
 1. Відкрийте https://render.com/deploy?repo=https://github.com/vladimir0y/1234 і увійдіть через GitHub
