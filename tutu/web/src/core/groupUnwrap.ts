@@ -10,7 +10,8 @@ import type { CombinedUnwrap } from "./unwrap";
 export type V3 = [number, number, number];
 
 export type GroupMapping =
-  | { kind: "cylinder"; origin: V3; axis: V3; front: V3 }
+  /** Unrolled around a polyline axis (joints of a limb, or a vertical line for the torso). */
+  | { kind: "cylinder"; path: V3[]; front: V3 }
   | { kind: "project"; side: "front" | "back" };
 
 export interface GroupSpec {
@@ -61,19 +62,26 @@ export function groupedUnwrap(
     // Per-vertex (u, v) for this group.
     const verts = new Map<number, [number, number]>();
     let R = 0;
-    let axis: V3 = [0, 1, 0], e1: V3 = [1, 0, 0], e2: V3 = [0, 0, 1], origin: V3 = [0, 0, 0];
-    if (spec.mapping.kind === "cylinder") {
-      origin = spec.mapping.origin;
-      axis = norm(spec.mapping.axis);
-      // Angle zero = the body's front projected onto the plane across the axis.
-      const fr = spec.mapping.front;
-      let f = sub(fr, axis.map((a) => a * dot(fr, axis)) as V3);
-      if (Math.hypot(...f) < 1e-6) f = [1, 0, 0];
-      e2 = norm(f);
-      e1 = cross(axis, e2); // right-hand side when looking at the front
-    }
     const angle = new Map<number, number>();
     const radii: number[] = [];
+    // Polyline axis: each vertex measures height along the polyline and its angle
+    // around the nearest segment, with angle 0 = the body's front.
+    const segs: Array<{ a: V3; d: V3; len: number; start: number; e1: V3; e2: V3 }> = [];
+    if (spec.mapping.kind === "cylinder") {
+      const path = spec.mapping.path;
+      let acc = 0;
+      for (let i = 0; i + 1 < path.length; i++) {
+        const dv = sub(path[i + 1], path[i]);
+        const len = Math.hypot(...dv) || 1e-6;
+        const d = norm(dv);
+        const fr = spec.mapping.front;
+        let f = sub(fr, d.map((x) => x * dot(fr, d)) as V3);
+        if (Math.hypot(...f) < 1e-6) f = [1, 0, 0];
+        const e2 = norm(f);
+        segs.push({ a: path[i], d, len, start: acc, e1: cross(d, e2), e2 });
+        acc += len;
+      }
+    }
     for (const f of faces)
       for (let k = 0; k < 3; k++) {
         const v = triangles[3 * f + k];
@@ -82,14 +90,23 @@ export function groupedUnwrap(
         if (spec.mapping.kind === "project") {
           // Seen from the back, x runs the other way.
           verts.set(v, [spec.mapping.side === "front" ? p[0] : -p[0], p[1]]);
-        } else {
-          const d = sub(p, origin);
-          const h = dot(d, axis);
-          const x = dot(d, e1), z = dot(d, e2);
-          angle.set(v, Math.atan2(x, z));
-          radii.push(Math.hypot(x, z));
-          verts.set(v, [0, h]);
+          continue;
         }
+        let best = segs[0], bt = 0, bd = Infinity;
+        segs.forEach((sg, i) => {
+          const rel = sub(p, sg.a);
+          let t = dot(rel, sg.d);
+          // The ends extend past the first/last joint.
+          if (i > 0) t = Math.max(t, 0);
+          if (i < segs.length - 1) t = Math.min(t, sg.len);
+          const q: V3 = [sg.a[0] + sg.d[0] * t, sg.a[1] + sg.d[1] * t, sg.a[2] + sg.d[2] * t];
+          const dist = Math.hypot(...sub(p, q));
+          if (dist < bd) (bd = dist), (best = sg), (bt = t);
+        });
+        const r = sub(p, [best.a[0] + best.d[0] * bt, best.a[1] + best.d[1] * bt, best.a[2] + best.d[2] * bt]);
+        angle.set(v, Math.atan2(dot(r, best.e1), dot(r, best.e2)));
+        radii.push(bd);
+        verts.set(v, [0, best.start + bt]);
       }
 
     // Cylinder: cut where the part is thinnest, then angle * radius.

@@ -603,17 +603,18 @@ function groupedForSelection(faces: number[], mesh: { positions: ArrayLike<numbe
   });
   const H = boneHeads;
   const FRONT: V3 = [0, 0, 1];
-  const axisOf = (part: string): { origin: V3; axis: V3 } => {
+  // Axis through the joints, from the far end towards the body (so "up" on the canvas points to the body).
+  const pathOf = (part: string): V3[] => {
     const s = part[0];
-    if (part.endsWith("-arm") && H[`hand_${s}`]) return { origin: H[`hand_${s}`], axis: sub3(H[`upperarm_${s}`], H[`hand_${s}`]) };
-    if (part.endsWith("-leg") && H[`foot_${s}`]) return { origin: H[`foot_${s}`], axis: sub3(H[`thigh_${s}`], H[`foot_${s}`]) };
-    if (part === "head" && H.head) return { origin: H.head, axis: [0, 1, 0] };
-    return { origin: H["spine_02"] ?? [0, 0, 0], axis: [0, 1, 0] };
+    if (part.endsWith("-arm") && H[`hand_${s}`]) return [H[`hand_${s}`], H[`lowerarm_${s}`], H[`upperarm_${s}`]];
+    if (part.endsWith("-leg") && H[`foot_${s}`]) return [H[`foot_${s}`], H[`calf_${s}`], H[`thigh_${s}`]];
+    const c = part === "head" && H.head ? H.head : H["spine_02"] ?? [0, 0, 0];
+    return [[c[0], c[1] - 1, c[2]], [c[0], c[1] + 1, c[2]]];
   };
-  for (const [part] of used) specs.push({ label: PART_LABELS[part], mapping: { kind: "cylinder", front: FRONT, ...axisOf(part) } });
+  for (const [part] of used) specs.push({ label: PART_LABELS[part], mapping: { kind: "cylinder", front: FRONT, path: pathOf(part) } });
   return { faceGroup, specs };
 }
-const sub3 = (a: V3, b: V3): V3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+
 $<HTMLSelectElement>("#canvas-mode").addEventListener("change", (e) => {
   canvasMode = (e.target as HTMLSelectElement).value as typeof canvasMode;
   unwrapSelection();

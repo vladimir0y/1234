@@ -224,7 +224,7 @@ describe("grouped unwrap", () => {
       tris.push(id(i, j), id(i + 1, j), id(i + 1, j + 1), id(i, j), id(i + 1, j + 1), id(i, j + 1));
     const T = tris.length / 3;
     const cyl = groupedUnwrap(positions, tris, new Int32Array(T), [
-      { label: "Рука", mapping: { kind: "cylinder", origin: [0, 0, 0], axis: [0, 1, 0], front: [0, 0, 1] } },
+      { label: "Рука", mapping: { kind: "cylinder", path: [[0, 0, 0], [0, 0.1, 0]], front: [0, 0, 1] } },
     ]);
     const g = cyl.groups[0];
     expect(g.maxU - g.minU).toBeCloseTo(2 * Math.PI * R, 2);
