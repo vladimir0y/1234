@@ -6,9 +6,8 @@ services:
     runtime: docker
     plan: free
     branch: claude/tutu-project-plan-6f5mg6
-    rootDir: tutu
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
+    dockerfilePath: ./tutu/Dockerfile
+    dockerContext: ./tutu
     healthCheckPath: /api/health
     envVars:
       - key: PORT
