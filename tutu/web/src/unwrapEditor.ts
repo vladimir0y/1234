@@ -8,6 +8,8 @@ export interface UnwrapGeometry {
   uv: Float64Array; // metres, 2 per vertex
   triangles: Uint32Array;
   areaRatio: Float64Array;
+  /** Names of canvas parts (body parts, front/back) drawn above each part. */
+  labels?: Array<{ text: string; u: number; v: number }>;
 }
 
 export interface Bounds {
@@ -521,6 +523,15 @@ export class UnwrapEditor {
     if (!this.showHeatmap) {
       ctx.fillStyle = "#e7c1a4";
       ctx.fill(path);
+    }
+    if (this.geometry.labels) {
+      ctx.fillStyle = "#aeb3c2";
+      ctx.font = "600 13px system-ui, sans-serif";
+      ctx.textAlign = "left";
+      for (const l of this.geometry.labels) {
+        const [x, y] = this.toScreen(l.u, l.v);
+        ctx.fillText(l.text, x, y - 8);
+      }
     }
 
     // Tattoo layers (draw the composed texture at its placement).

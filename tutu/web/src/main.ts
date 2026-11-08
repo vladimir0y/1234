@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { api, type BodyMeshData, type BodyPreset, type BodyPresetParams } from "./api";
 import { createBackend, STANDALONE, type Backend } from "./backend";
 import { isRest, POSE_PRESETS, Poser, REST_POSE, type PoseParams } from "./core/pose";
-import { panoramaUnwrap } from "./core/panorama";
+import { groupedUnwrap, PART_LABELS, partOfBone, type GroupSpec, type V3 } from "./core/groupUnwrap";
 import { extensionOf, MESH_EXTENSIONS, parseMesh, prepareBody } from "./core/loaders";
 import { setPngDpi } from "./core/png";
 import { acceptedComponents, buildFaceAdjacency, connectedComponents, extractPatch, smoothSelection } from "./core/topology";
@@ -23,6 +23,8 @@ interface ProjectState {
   model: BodyModel | { type: "scan"; id: string };
   selection: number[]; // run-length encoded [start, length, ...]
   up?: [number, number, number]; // unwrap orientation (limb axis for zones)
+  canvas?: "unwrap" | "parts" | "front-back";
+  pose?: Partial<PoseParams>;
   layers: ReturnType<UnwrapEditor["serialize"]>;
 }
 
@@ -167,6 +169,12 @@ async function loadBody(presetId: string, overrides: Partial<BodyPresetParams> =
         head: b.head.map((x, i) => x * prepared.scale + prepared.offset.getComponent(i)) as [number, number, number],
       }));
       poser = new Poser({ ...mesh.skin, bones });
+      boneHeads = Object.fromEntries(bones.map((b) => [b.name, b.head]));
+      // Body part of every vertex = part of its strongest bone.
+      const parts = Object.keys(PART_LABELS);
+      vertexPart = Uint8Array.from({ length: mesh.skin.index.length / 4 }, (_, v) =>
+        parts.indexOf(partOfBone(bones[mesh.skin!.index[4 * v]].name)),
+      );
     }
     $("#pose-panel").hidden = !poser;
     applyPose();
@@ -225,6 +233,8 @@ function setInfo(text: string, warn = false) {
 }
 
 let unwrapRun = 0;
+let lastGroups: Array<{ label: string; minU: number; minV: number; maxU: number; maxV: number }> = [];
+const groupBoxes = () => lastGroups;
 async function unwrapSelection() {
   const mesh = viewer.mesh;
   if (!mesh || !adjacency) return;
@@ -239,15 +249,18 @@ async function unwrapSelection() {
     return;
   }
   const comps = connectedComponents(adjacency, viewer.selection).filter((c) => c.length >= 2);
-  const panorama = canvasMode === "panorama";
-  // Panorama: one canvas for everything selected (back, sides, front, legs).
-  const patches = panorama ? [extractPatch(mesh, comps.flat())] : comps.map((faces) => extractPatch(mesh, faces));
+  const grouped = canvasMode !== "unwrap";
+  // Grouped canvases take everything selected as one patch, then split it by body part or by side.
+  const patches = grouped ? [extractPatch(mesh, comps.flat())] : comps.map((faces) => extractPatch(mesh, faces));
   setInfo("Розгортаю…");
   let result: CombinedUnwrap;
+  let labels: Array<{ text: string; u: number; v: number }> | undefined;
   try {
-    if (panorama) {
-      const axis = landmarks?.["spine-2"] ?? [0, 0, 0];
-      result = panoramaUnwrap(patches[0].positions, patches[0].triangles, { center: [axis[0], axis[2]], seam: "auto" });
+    if (grouped) {
+      const g = groupedForSelection(patches[0].faces, mesh);
+      const r = groupedUnwrap(patches[0].positions, patches[0].triangles, g.faceGroup, g.specs);
+      labels = r.groups.map((x) => ({ text: x.label, u: x.minU, v: x.maxV }));
+      result = r;
     } else {
       result = await runUnwrap(patches.map((p) => ({ positions: p.positions, triangles: p.triangles })));
     }
@@ -258,7 +271,8 @@ async function unwrapSelection() {
   if (run !== unwrapRun) return;
   const flat = patches.flatMap((p) => p.vertices);
   patchVertices = Array.from(result.source, (i) => flat[i]); // cut seams duplicate vertices
-  editor.setGeometry({ uv: result.uv, triangles: result.triangles, areaRatio: result.areaRatio });
+  editor.setGeometry({ uv: result.uv, triangles: result.triangles, areaRatio: result.areaRatio, labels });
+  lastGroups = "groups" in result ? (result as { groups: ReturnType<typeof groupBoxes> }).groups : [];
 
   texture?.dispose();
   texture = new THREE.CanvasTexture(editor.texture);
@@ -268,8 +282,12 @@ async function unwrapSelection() {
 
   const { width, height } = editor.size;
   const quality = result.meanDistortion < 0.05 ? "відмінна" : result.meanDistortion < 0.15 ? "добра" : "помітні спотворення";
-  if (panorama) {
-    setInfo(`Панорама навколо тіла: ${(width * 100).toFixed(0)} × ${(height * 100).toFixed(0)} см · шов там, де ділянка найвужча`);
+  if (grouped) {
+    setInfo(
+      canvasMode === "parts"
+        ? `По частинах тіла: ${labels!.map((l) => l.text.toLowerCase()).join(", ")} · кожна частина розгорнута навколо своєї осі`
+        : `Спереду / ззаду: як на фото тіла спереду і зі спини · ${(width * 100).toFixed(0)} × ${(height * 100).toFixed(0)} см`,
+    );
     markDirty();
     return;
   }
@@ -549,10 +567,57 @@ function addToGallery(img: HTMLImageElement, title: string) {
 }
 
 // --- Canvas mode, region shape and style references for generators
-let canvasMode: "unwrap" | "panorama" = "unwrap";
+let canvasMode: "unwrap" | "parts" | "front-back" = "unwrap";
+let vertexPart: Uint8Array | null = null;
+let boneHeads: Record<string, V3> = {};
+
+/** Split the selected faces into canvas groups for the current canvas mode. */
+function groupedForSelection(faces: number[], mesh: { positions: ArrayLike<number>; indices: ArrayLike<number> }) {
+  const faceGroup = new Int32Array(faces.length);
+  const specs: GroupSpec[] = [];
+  if (canvasMode === "front-back") {
+    const N = viewer.normals!;
+    faces.forEach((f, i) => {
+      let z = 0;
+      for (let k = 0; k < 3; k++) z += N[3 * mesh.indices[3 * f + k] + 2];
+      faceGroup[i] = z >= 0 ? 0 : 1;
+    });
+    specs.push({ label: "Спереду", mapping: { kind: "project", side: "front" } }, { label: "Ззаду", mapping: { kind: "project", side: "back" } });
+    return { faceGroup, specs };
+  }
+  // By body part. Without a skeleton (own 3D file) everything is one part around the body axis.
+  const parts = Object.keys(PART_LABELS);
+  const used = new Map<string, number>();
+  faces.forEach((f, i) => {
+    let part = "torso";
+    if (vertexPart) {
+      const votes = new Map<number, number>();
+      for (let k = 0; k < 3; k++) {
+        const p = vertexPart[mesh.indices[3 * f + k]];
+        votes.set(p, (votes.get(p) ?? 0) + 1);
+      }
+      part = parts[[...votes].sort((a, b) => b[1] - a[1])[0][0]];
+    }
+    if (!used.has(part)) used.set(part, used.size);
+    faceGroup[i] = used.get(part)!;
+  });
+  const H = boneHeads;
+  const FRONT: V3 = [0, 0, 1];
+  const axisOf = (part: string): { origin: V3; axis: V3 } => {
+    const s = part[0];
+    if (part.endsWith("-arm") && H[`hand_${s}`]) return { origin: H[`hand_${s}`], axis: sub3(H[`upperarm_${s}`], H[`hand_${s}`]) };
+    if (part.endsWith("-leg") && H[`foot_${s}`]) return { origin: H[`foot_${s}`], axis: sub3(H[`thigh_${s}`], H[`foot_${s}`]) };
+    if (part === "head" && H.head) return { origin: H.head, axis: [0, 1, 0] };
+    return { origin: H["spine_02"] ?? [0, 0, 0], axis: [0, 1, 0] };
+  };
+  for (const [part] of used) specs.push({ label: PART_LABELS[part], mapping: { kind: "cylinder", front: FRONT, ...axisOf(part) } });
+  return { faceGroup, specs };
+}
+const sub3 = (a: V3, b: V3): V3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 $<HTMLSelectElement>("#canvas-mode").addEventListener("change", (e) => {
   canvasMode = (e.target as HTMLSelectElement).value as typeof canvasMode;
   unwrapSelection();
+  markDirty();
 });
 
 function shapeForGenerator(fit: boolean) {
@@ -853,6 +918,8 @@ $("#save").addEventListener("click", async () => {
       model: model.type === "file" ? { type: "body", preset: "m-average", overrides: {} } : model,
       selection: rle([...viewer.selection].sort((a, b) => a - b)),
       up: unwrapUp,
+      canvas: canvasMode,
+      pose,
       layers: editor.serialize(),
     };
     const saved = await backend.saveProject(projectId, { name, state });
@@ -871,14 +938,34 @@ $("#save").addEventListener("click", async () => {
 async function openProject(id: string) {
   const p = await backend.loadProject<ProjectState>(id);
   projectId = p.id;
-  $<HTMLInputElement>("#project-name").value = p.name;
-  const m = p.state.model;
+  await openState(p.state, p.name);
+}
+
+async function openState(state: ProjectState, name: string) {
+  $<HTMLInputElement>("#project-name").value = name;
+  const m = state.model;
   if (m.type === "scan") await loadScan(m.id);
   else if (m.type === "body") await loadBody(m.preset, m.overrides ?? {});
-  unwrapUp = p.state.up ?? [0, 1, 0];
-  viewer.setSelection(unrle(p.state.selection));
+  unwrapUp = state.up ?? [0, 1, 0];
+  canvasMode = state.canvas ?? "unwrap";
+  $<HTMLSelectElement>("#canvas-mode").value = canvasMode;
+  pose = { ...REST_POSE, ...(state.pose ?? {}) };
+  syncPoseUI();
+  applyPose();
+  viewer.setSelection(unrle(state.selection));
   await unwrapSelection();
-  await editor.deserialize(p.state.layers);
+  await editor.deserialize(state.layers);
+}
+
+/** Ready-made example projects shipped next to the page (browser build). */
+const EXAMPLES = [{ id: "snake-portrait", name: "Приклад: змія спереду + портрет на спині" }];
+async function openExample(id: string) {
+  const r = await fetch(new URL(`./examples/${id}.json`, document.baseURI).href);
+  if (!r.ok) throw new Error("Приклад не знайдено");
+  const ex = await r.json();
+  projectId = null;
+  await openState(ex.state, ex.name);
+  viewer.frameAll();
 }
 
 async function refreshProjectList() {
@@ -887,7 +974,8 @@ async function refreshProjectList() {
   sel.innerHTML = "";
   sel.add(new Option(items.length ? `Мої проєкти (${items.length})` : "Немає збережених", ""));
   for (const p of items) sel.add(new Option(`${p.name} · ${new Date(p.updated).toLocaleDateString("uk")}`, p.id));
-  sel.disabled = !items.length;
+  if (STANDALONE) for (const e of EXAMPLES) sel.add(new Option(e.name, `example:${e.id}`));
+  sel.disabled = sel.options.length < 2;
 }
 $<HTMLSelectElement>("#projects").addEventListener("change", async (e) => {
   const sel = e.target as HTMLSelectElement;
@@ -895,7 +983,8 @@ $<HTMLSelectElement>("#projects").addEventListener("change", async (e) => {
   sel.value = "";
   if (!id) return;
   try {
-    await openProject(id);
+    if (id.startsWith("example:")) await openExample(id.slice(8));
+    else await openProject(id);
     dirty = false;
     toast("Проєкт відкрито");
   } catch (err) {
@@ -973,6 +1062,54 @@ $$<HTMLButtonElement>(".tabs button").forEach((b) =>
 // Bridge for the iOS app: window.tutu.loadMeshBase64(b64, "scan.obj")
 (window as unknown as { tutu: unknown }).tutu = {
   loadBody,
+  // Scripting hooks (iOS app, building example projects).
+  async selectRegion(opts: { parts: string[]; yMin?: number; yMax?: number }) {
+    if (!vertexPart || !viewer.mesh) throw new Error("Немає скелета");
+    const names = Object.keys(PART_LABELS);
+    const want = new Set(opts.parts.map((p) => names.indexOf(p)));
+    const { positions, indices } = viewer.mesh;
+    const faces: number[] = [];
+    for (let f = 0; f < indices.length / 3; f++) {
+      let y = 0, ok = 0;
+      for (let k = 0; k < 3; k++) {
+        const v = indices[3 * f + k];
+        y += positions[3 * v + 1] / 3;
+        if (want.has(vertexPart[v])) ok++;
+      }
+      if (ok >= 2 && y >= (opts.yMin ?? -1) && y <= (opts.yMax ?? 9)) faces.push(f);
+    }
+    viewer.setSelection(faces);
+    await unwrapSelection();
+    return faces.length;
+  },
+  async setCanvas(mode: typeof canvasMode) {
+    canvasMode = mode;
+    $<HTMLSelectElement>("#canvas-mode").value = mode;
+    await unwrapSelection();
+  },
+  /** Add an image layer into one labelled canvas part, covering `fill` of its width. */
+  async addLayerToGroup(url: string, name: string, group: string, opts: { fill?: number; dx?: number; dy?: number; widthM?: number } = {}) {
+    const img = await loadImage(url);
+    const layer = editor.addImageLayer(img, name);
+    const g = editor.geometry?.labels?.find((l) => l.text === group);
+    const box = groupBoxes().find((b) => b.label === group);
+    if (!g || !box) return;
+    const w = opts.widthM ?? (box.maxU - box.minU) * (opts.fill ?? 0.9);
+    editor.updateLayer(layer, { x: (box.minU + box.maxU) / 2 + (opts.dx ?? 0), y: (box.minV + box.maxV) / 2 + (opts.dy ?? 0), width: w });
+  },
+  exportState(): ProjectState {
+    return {
+      model: model.type === "body" ? model : { type: "body", preset: "m-average", overrides: {} },
+      selection: rle([...viewer.selection].sort((a, b) => a - b)),
+      up: unwrapUp,
+      canvas: canvasMode,
+      pose,
+      layers: editor.serialize(),
+    };
+  },
+  async importState(state: ProjectState, name: string) {
+    await openState(state, name);
+  },
   async loadMeshBase64(b64: string, filename: string) {
     const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
     rawFile = { data: bin.buffer, name: filename };

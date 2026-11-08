@@ -207,3 +207,44 @@ describe("panorama", () => {
     for (let t = 0; t < r.triangles.length / 3; t++) expect(r.areaRatio[t]).toBeGreaterThan(0.9);
   });
 });
+
+describe("grouped unwrap", () => {
+  it("lays out a limb ring and a front/back split side by side", async () => {
+    const { groupedUnwrap } = await import("../src/core/groupUnwrap");
+    // A vertical ring (like a forearm) of radius 4 cm and height 10 cm.
+    const R = 0.04, N = 48;
+    const positions: number[] = [];
+    const tris: number[] = [];
+    for (let j = 0; j <= 4; j++) for (let i = 0; i < N; i++) {
+      const a = (2 * Math.PI * i) / N;
+      positions.push(R * Math.sin(a), 0.025 * j, R * Math.cos(a));
+    }
+    const id = (i: number, j: number) => j * N + (i % N);
+    for (let j = 0; j < 4; j++) for (let i = 0; i < N; i++)
+      tris.push(id(i, j), id(i + 1, j), id(i + 1, j + 1), id(i, j), id(i + 1, j + 1), id(i, j + 1));
+    const T = tris.length / 3;
+    const cyl = groupedUnwrap(positions, tris, new Int32Array(T), [
+      { label: "Рука", mapping: { kind: "cylinder", origin: [0, 0, 0], axis: [0, 1, 0], front: [0, 0, 1] } },
+    ]);
+    const g = cyl.groups[0];
+    expect(g.maxU - g.minU).toBeCloseTo(2 * Math.PI * R, 2);
+    expect(g.maxV - g.minV).toBeCloseTo(0.1, 3);
+    for (let t = 0; t < T; t++) expect(cyl.areaRatio[t]).toBeGreaterThan(0.9);
+
+    // Front/back projection: faces facing +z go to "front", the others to "back".
+    const faceGroup = new Int32Array(T);
+    for (let t = 0; t < T; t++) {
+      const z = (positions[3 * tris[3 * t] + 2] + positions[3 * tris[3 * t + 1] + 2] + positions[3 * tris[3 * t + 2] + 2]) / 3;
+      faceGroup[t] = z >= 0 ? 0 : 1;
+    }
+    const fb = groupedUnwrap(positions, tris, faceGroup, [
+      { label: "Спереду", mapping: { kind: "project", side: "front" } },
+      { label: "Ззаду", mapping: { kind: "project", side: "back" } },
+    ]);
+    expect(fb.groups.map((x) => x.label)).toEqual(["Спереду", "Ззаду"]);
+    expect(fb.groups[1].minU).toBeGreaterThan(fb.groups[0].maxU);
+    expect(fb.groups[0].maxU - fb.groups[0].minU).toBeCloseTo(2 * R, 2);
+    // No mirrored triangles in either view.
+    for (let t = 0; t < fb.triangles.length / 3; t++) expect(fb.areaRatio[t]).not.toBe(0);
+  });
+});

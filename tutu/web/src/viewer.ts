@@ -217,7 +217,7 @@ export class Viewer {
     const attr = this.body.geometry.getAttribute("color") as THREE.BufferAttribute;
     const arr = attr.array as Float32Array;
     // Fainter once a design is on the region, so the tattoo stays readable.
-    const tint = this.skin.clone().lerp(HIGHLIGHT, this.patch ? 0.18 : 0.5);
+    const tint = this.skin.clone().lerp(HIGHLIGHT, this.patch ? 0.06 : 0.5);
     const faces = arr.length / 9;
     for (let f = 0; f < faces; f++) {
       const c = this.showSelection && this.selection.has(f) ? tint : this.skin;
@@ -248,10 +248,17 @@ export class Viewer {
     geom.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
     geom.setIndex(new THREE.BufferAttribute(triangles, 1));
     geom.computeVertexNormals();
-    const mat = new THREE.MeshStandardMaterial({
+    // Ink sits under the skin: multiply the lit skin by the tattoo colour
+    // (white leaves the skin as is, black becomes dark ink), weighted by alpha.
+    // result = skin * (colour * a) + skin * (1 - a)
+    const mat = new THREE.MeshBasicMaterial({
       map: texture,
       transparent: true,
-      roughness: 0.8,
+      premultipliedAlpha: true,
+      blending: THREE.CustomBlending,
+      blendEquation: THREE.AddEquation,
+      blendSrc: THREE.DstColorFactor,
+      blendDst: THREE.OneMinusSrcAlphaFactor,
       depthWrite: false,
       polygonOffset: true,
       polygonOffsetFactor: -2,

@@ -16,6 +16,7 @@ rmSync(out, { recursive: true, force: true });
 mkdirSync(out);
 cpSync("dist-standalone/assets", `${out}/assets`, { recursive: true });
 cpSync("standalone/body-model.bin", `${out}/body-model.wasm`); // artifact hosts serve .wasm, not .bin
+if (existsSync("standalone/examples")) cpSync("standalone/examples", `${out}/examples`, { recursive: true });
 
 const html = readFileSync("dist-standalone/index.html", "utf8");
 const title = /<title>(.*?)<\/title>/s.exec(html)[1];
