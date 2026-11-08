@@ -77,3 +77,53 @@ export const api = {
 
   loadProject: <S>(id: string) => fetch(`${BASE}/api/projects/${id}`).then((r) => json<Project<S>>(r)),
 };
+
+export interface BodyPresetParams {
+  sex: number; // 0 female .. 1 male
+  height_cm: number;
+  weight: number;
+  muscle: number;
+  breast?: number;
+  glutes?: number;
+  belly?: number;
+}
+
+export interface BodyPreset {
+  id: string;
+  label: string;
+  description: string;
+  params: BodyPresetParams;
+}
+
+export interface BodyMeshData {
+  positions: Float32Array;
+  indices: Uint32Array;
+  landmarks: Record<string, [number, number, number]>;
+}
+
+/** Parse the server's TUTB body format: header JSON + float32 xyz + uint32 triangles. */
+export function parseBodyMesh(buf: ArrayBuffer): BodyMeshData {
+  const view = new DataView(buf);
+  const magic = String.fromCharCode(...new Uint8Array(buf, 0, 4));
+  if (magic !== "TUTB") throw new Error("Невірний формат моделі тіла");
+  const headerLen = view.getUint32(8, true);
+  const header = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 16, headerLen)));
+  let off = 16 + headerLen;
+  const nv = view.getUint32(off, true);
+  const nt = view.getUint32(off + 4, true);
+  off += 8;
+  const positions = new Float32Array(buf.slice(off, off + nv * 12));
+  const indices = new Uint32Array(buf.slice(off + nv * 12, off + nv * 12 + nt * 12));
+  return { positions, indices, landmarks: header.landmarks };
+}
+
+export const bodyApi = {
+  presets: () => fetch(`${BASE}/api/bodies/presets`).then((r) => json<BodyPreset[]>(r)),
+  mesh: async (preset: string, overrides: Partial<BodyPresetParams>) => {
+    const q = new URLSearchParams({ preset });
+    for (const [k, v] of Object.entries(overrides)) if (v !== undefined) q.set(k, String(v));
+    const r = await fetch(`${BASE}/api/bodies/mesh?${q}`);
+    if (!r.ok) throw new Error(`Модель тіла недоступна (${r.status})`);
+    return parseBodyMesh(await r.arrayBuffer());
+  },
+};

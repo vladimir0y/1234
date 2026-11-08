@@ -1,7 +1,5 @@
 import * as THREE from "three";
-import { api } from "./api";
-import { BODY_PRESETS, findPreset, type BodyParams, type Sex } from "./core/bodyModels";
-import { DEMO_MODELS, type DemoModelId } from "./core/demoModels";
+import { api, bodyApi, type BodyMeshData, type BodyPreset, type BodyPresetParams } from "./api";
 import { extensionOf, MESH_EXTENSIONS, parseMesh, prepareBody } from "./core/loaders";
 import { setPngDpi } from "./core/png";
 import { buildFaceAdjacency, connectedComponents, extractPatch, smoothSelection } from "./core/topology";
@@ -14,18 +12,21 @@ const $$ = <T extends HTMLElement = HTMLElement>(sel: string) => [...document.qu
 
 // ---------------------------------------------------------------------------
 // State
-type BodyModel = { type: "body"; preset: string; height: number };
-type ModelSource = BodyModel | { type: "demo"; id: DemoModelId } | { type: "scan"; id: string } | { type: "file"; name: string };
+type BodyModel = { type: "body"; preset: string; overrides: Partial<BodyPresetParams> };
+type ModelSource = BodyModel | { type: "scan"; id: string } | { type: "file"; name: string };
+type Sex = "male" | "female";
 
 interface ProjectState {
-  model: BodyModel | { type: "demo"; id: DemoModelId } | { type: "scan"; id: string };
+  model: BodyModel | { type: "scan"; id: string };
   selection: number[]; // run-length encoded [start, length, ...]
   layers: ReturnType<UnwrapEditor["serialize"]>;
 }
 
 const viewer = new Viewer($("#viewport"));
 const editor = new UnwrapEditor($("#unwrap"));
-let model: ModelSource = { type: "body", preset: "m-average", height: 1.76 };
+let model: ModelSource = { type: "body", preset: "m-average", overrides: {} };
+let presets: BodyPreset[] = [];
+let landmarks: BodyMeshData["landmarks"] | null = null;
 let rawFile: { data: ArrayBuffer; name: string } | null = null;
 let projectId: string | null = new URLSearchParams(location.search).get("project");
 let texture: THREE.CanvasTexture | null = null;
@@ -88,9 +89,10 @@ function unrle(runs: number[]): number[] {
 
 // ---------------------------------------------------------------------------
 // Model loading
-async function loadGeometry(geometry: THREE.BufferGeometry, label: string) {
+async function loadGeometry(geometry: THREE.BufferGeometry, label: string, opts: { keepCamera?: boolean } = {}) {
   const prepared = prepareBody(geometry);
-  viewer.setBody(prepared);
+  landmarks = null;
+  viewer.setBody(prepared, opts.keepCamera);
   brush3d.value = String(Math.round(viewer.brushRadius * 1000));
   $("#brush3d-out").textContent = `${(viewer.brushRadius * 100).toFixed(1)} см`;
   adjacency = buildFaceAdjacency(viewer.mesh!);
@@ -103,58 +105,69 @@ async function loadGeometry(geometry: THREE.BufferGeometry, label: string) {
     `${faces.toLocaleString("uk")} трикутників` + (prepared.unit !== "m" ? ` (одиниці файлу: ${prepared.unit})` : "");
 }
 
-// --- Base bodies (generated in a worker, cached)
-const bodyWorker = new Worker(new URL("./body.worker.ts", import.meta.url), { type: "module" });
-let bodyJob = 0;
-type RawMesh = { positions: Float32Array; indices: Uint32Array };
-const bodyCache = new Map<string, RawMesh>();
-function generateBody(params: BodyParams): Promise<RawMesh> {
-  const key = JSON.stringify(params);
-  const cached = bodyCache.get(key);
-  if (cached) return Promise.resolve(cached);
-  const id = ++bodyJob;
-  return new Promise((resolve, reject) => {
-    const onMsg = (e: MessageEvent<{ id: number; mesh?: RawMesh; error?: string }>) => {
-      if (e.data.id !== id) return;
-      bodyWorker.removeEventListener("message", onMsg);
-      if (e.data.error) return reject(new Error(e.data.error));
-      bodyCache.set(key, e.data.mesh!);
-      resolve(e.data.mesh!);
-    };
-    bodyWorker.addEventListener("message", onMsg);
-    bodyWorker.postMessage({ id, params });
-  });
+// --- Realistic base bodies, generated on the server from anthropometric morphs
+const bodyCache = new Map<string, BodyMeshData>();
+let bodyRequest = 0;
+
+function presetById(id: string): BodyPreset | undefined {
+  return presets.find((p) => p.id === id);
 }
 
-let bodyRequest = 0;
-async function loadBody(presetId: string, height?: number) {
-  const preset = findPreset(presetId) ?? BODY_PRESETS[1];
-  const h = height ?? preset.params.height;
-  model = { type: "body", preset: preset.id, height: h };
+function bodyParams(m: BodyModel): BodyPresetParams | null {
+  const p = presetById(m.preset);
+  return p ? { ...p.params, ...m.overrides } : null;
+}
+
+/** Litres of a closed mesh; for a body ~ kilograms (density ~1). */
+function meshVolume(pos: ArrayLike<number>, idx: ArrayLike<number>): number {
+  let v = 0;
+  for (let t = 0; t < idx.length; t += 3) {
+    const a = 3 * idx[t], b = 3 * idx[t + 1], c = 3 * idx[t + 2];
+    v +=
+      pos[a] * (pos[b + 1] * pos[c + 2] - pos[b + 2] * pos[c + 1]) -
+      pos[a + 1] * (pos[b] * pos[c + 2] - pos[b + 2] * pos[c]) +
+      pos[a + 2] * (pos[b] * pos[c + 1] - pos[b + 1] * pos[c]);
+  }
+  return (v / 6) * 1000;
+}
+
+async function loadBody(presetId: string, overrides: Partial<BodyPresetParams> = {}) {
+  const preset = presetById(presetId) ?? presets[1];
+  if (!preset) throw new Error("Моделі тіла завантажуються з сервера — сервер недоступний");
+  // Same topology for every body: keep the region and the design when only the shape changes.
+  const keepSelection = model.type === "body" && viewer.mesh ? [...viewer.selection] : [];
+  model = { type: "body", preset: preset.id, overrides };
   rawFile = null;
   syncBodyUI();
   const request = ++bodyRequest;
   const overlay = document.createElement("div");
   overlay.className = "loading-overlay";
-  overlay.textContent = "Створюю модель тіла…";
+  overlay.textContent = "Будую модель тіла…";
   $("#viewport").appendChild(overlay);
   try {
-    const mesh = await generateBody({ ...preset.params, height: h });
-    if (request !== bodyRequest) return; // the user already picked another body
+    const key = JSON.stringify([preset.id, overrides]);
+    let mesh = bodyCache.get(key);
+    if (!mesh) {
+      mesh = await bodyApi.mesh(preset.id, overrides);
+      bodyCache.set(key, mesh);
+    }
+    if (request !== bodyRequest) return; // superseded by a newer choice
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.BufferAttribute(mesh.positions.slice(), 3));
     g.setIndex(new THREE.BufferAttribute(mesh.indices.slice(), 1));
-    await loadGeometry(g, `${preset.params.sex === "male" ? "Чоловіче" : "Жіноче"} · ${preset.label}`);
+    const params = bodyParams(model)!;
+    const kg = meshVolume(mesh.positions, mesh.indices);
+    const sex = params.sex >= 0.5 ? "Чоловіче" : "Жіноче";
+    await loadGeometry(g, `${sex} · ${preset.label}`, { keepCamera: keepSelection.length > 0 });
+    landmarks = mesh.landmarks;
+    $("#model-info").textContent = `${sex} · ${preset.label}: ${Math.round(params.height_cm)} см, ≈${Math.round(kg)} кг`;
+    if (keepSelection.length) {
+      viewer.setSelection(keepSelection);
+      await unwrapSelection();
+    }
   } finally {
     overlay.remove();
   }
-}
-
-async function loadDemo(id: DemoModelId) {
-  model = { type: "demo", id };
-  rawFile = null;
-  syncBodyUI();
-  await loadGeometry(DEMO_MODELS[id].build(), DEMO_MODELS[id].label);
 }
 
 async function loadMeshData(data: ArrayBuffer, filename: string, source: ModelSource) {
@@ -466,22 +479,31 @@ $("#export-shot").addEventListener("click", async () => {
 
 // ---------------------------------------------------------------------------
 // Model panel
-const demoSelect = $<HTMLSelectElement>("#demo-model");
-for (const [id, m] of Object.entries(DEMO_MODELS)) demoSelect.add(new Option(m.label, id));
-demoSelect.addEventListener("change", () => {
-  if (demoSelect.value) loadDemo(demoSelect.value as DemoModelId).catch((e) => toast(e.message, true));
-});
-
 let currentSex: Sex = "male";
-const heightInput = $<HTMLInputElement>("#body-height");
+const sliders = {
+  height_cm: { input: $<HTMLInputElement>("#body-height"), out: $("#body-height-out"), toValue: (v: number) => v, fromValue: (v: number) => v, fmt: (v: number) => `${v} см` },
+  weight: { input: $<HTMLInputElement>("#body-weight"), out: $("#body-weight-out"), toValue: (v: number) => v / 100, fromValue: (v: number) => v * 100, fmt: (v: number) => weightLabel(v) },
+  muscle: { input: $<HTMLInputElement>("#body-muscle"), out: $("#body-muscle-out"), toValue: (v: number) => v / 100, fromValue: (v: number) => v * 100, fmt: (v: number) => muscleLabel(v) },
+  breast: { input: $<HTMLInputElement>("#body-breast"), out: $("#body-breast-out"), toValue: (v: number) => v / 100, fromValue: (v: number) => v * 100, fmt: (v: number) => breastLabel(v) },
+} as const;
 
-function silhouette(p: BodyParams): string {
-  const f = p.sex === "female";
-  const sh = 15 * p.shoulders * (f ? 0.9 : 1);
-  const w = 11 * p.waist * (f ? 0.85 : 1) * (p.belly > 1.3 ? 1.12 : 1);
-  const hp = 13 * p.hips * (f ? 1.12 : 1);
-  const a = 3.2 * p.arms;
-  const l = 5.5 * p.legs;
+function weightLabel(v: number) {
+  return v < 20 ? "дуже худа" : v < 40 ? "худа" : v < 60 ? "середня" : v < 80 ? "вище сер." : "велика";
+}
+function muscleLabel(v: number) {
+  return v < 30 ? "слабкі" : v < 60 ? "середні" : v < 80 ? "тренов." : "атлет";
+}
+function breastLabel(v: number) {
+  return v < 30 ? "мала" : v < 60 ? "середня" : v < 80 ? "велика" : "дуже велика";
+}
+
+function silhouette(p: BodyPresetParams): string {
+  const f = p.sex < 0.5;
+  const sh = 15 * (f ? 0.88 : 1) * (0.92 + p.muscle * 0.16);
+  const w = 11 * (f ? 0.82 : 1) * (0.82 + p.weight * 0.45);
+  const hp = 13 * (f ? 1.1 : 0.95) * (0.88 + p.weight * 0.3);
+  const a = 3 * (0.85 + p.weight * 0.3 + p.muscle * 0.15);
+  const l = 5 * (0.85 + p.weight * 0.35);
   return `<svg viewBox="0 0 60 100" aria-hidden="true"><path d="
     M${30 - sh} 22 Q30 17 ${30 + sh} 22 L${30 + w} 44 Q${30 + hp + 1} 52 ${30 + hp} 56
     L${30 + 3 + l} 96 L${30 + 1} 96 L30 60 L${30 - 1} 96 L${30 - 3 - l} 96 L${30 - hp} 56
@@ -492,15 +514,20 @@ function silhouette(p: BodyParams): string {
 }
 
 function syncBodyUI() {
-  if (model.type === "body") {
-    currentSex = findPreset(model.preset)?.params.sex ?? currentSex;
-    heightInput.value = String(Math.round(model.height * 100));
-    $("#body-height-out").textContent = `${heightInput.value} см`;
+  const params = model.type === "body" ? bodyParams(model) : null;
+  if (params) {
+    currentSex = params.sex >= 0.5 ? "male" : "female";
+    for (const [key, s] of Object.entries(sliders)) {
+      const v = (params as unknown as Record<string, number | undefined>)[key] ?? 0.5;
+      s.input.value = String(Math.round(s.fromValue(v)));
+      s.out.textContent = s.fmt(Number(s.input.value));
+    }
   }
+  $("#breast-row").hidden = currentSex === "male";
   $$<HTMLButtonElement>("[data-sex]").forEach((b) => b.classList.toggle("active", b.dataset.sex === currentSex));
   const box = $("#body-presets");
   box.innerHTML = "";
-  for (const preset of BODY_PRESETS.filter((p) => p.params.sex === currentSex)) {
+  for (const preset of presets.filter((p) => (p.params.sex >= 0.5 ? "male" : "female") === currentSex)) {
     const b = document.createElement("button");
     b.title = preset.description;
     b.innerHTML = `${silhouette(preset.params)}<span>${preset.label}</span>`;
@@ -508,20 +535,51 @@ function syncBodyUI() {
     b.addEventListener("click", () => loadBody(preset.id).catch((e) => toast(e.message, true)));
     box.appendChild(b);
   }
-  if (model.type !== "demo") demoSelect.value = "";
+  $<HTMLSelectElement>("#focus").disabled = model.type !== "body";
 }
 
 $$<HTMLButtonElement>("[data-sex]").forEach((b) =>
   b.addEventListener("click", () => {
     currentSex = b.dataset.sex as Sex;
-    const preset = BODY_PRESETS.find((p) => p.params.sex === currentSex && p.id.endsWith("average"))!;
-    loadBody(preset.id).catch((e) => toast(e.message, true));
+    const preset = presets.find((p) => (p.params.sex >= 0.5 ? "male" : "female") === currentSex && p.id.endsWith("average"));
+    if (preset) loadBody(preset.id).catch((e) => toast(e.message, true));
   }),
 );
-heightInput.addEventListener("input", () => ($("#body-height-out").textContent = `${heightInput.value} см`));
-heightInput.addEventListener("change", () => {
-  const presetId = model.type === "body" ? model.preset : BODY_PRESETS.find((p) => p.params.sex === currentSex)!.id;
-  loadBody(presetId, Number(heightInput.value) / 100).catch((e) => toast(e.message, true));
+for (const [key, s] of Object.entries(sliders)) {
+  s.input.addEventListener("input", () => (s.out.textContent = s.fmt(Number(s.input.value))));
+  s.input.addEventListener("change", () => {
+    if (model.type !== "body") return;
+    const overrides = { ...model.overrides, [key]: s.toValue(Number(s.input.value)) };
+    loadBody(model.preset, overrides).catch((e) => toast(e.message, true));
+  });
+}
+
+// Camera shortcuts to body parts, placed by the model's joint landmarks.
+type Focus = { joints: string[]; dir: [number, number, number]; dist: number; dy?: number };
+const FOCUS: Record<string, Focus> = {
+  "l-forearm": { joints: ["l-elbow", "l-hand"], dir: [0.4, 0.15, 1], dist: 0.65 },
+  "r-forearm": { joints: ["r-elbow", "r-hand"], dir: [-0.4, 0.15, 1], dist: 0.65 },
+  "l-shoulder": { joints: ["l-shoulder", "l-elbow"], dir: [0.7, 0.1, 1], dist: 0.6 },
+  "r-shoulder": { joints: ["r-shoulder", "r-elbow"], dir: [-0.7, 0.1, 1], dist: 0.6 },
+  chest: { joints: ["l-clavicle", "r-clavicle"], dir: [0.15, 0.05, 1], dist: 0.75, dy: -0.1 },
+  belly: { joints: ["spine-1", "pelvis"], dir: [0.15, 0.05, 1], dist: 0.75 },
+  back: { joints: ["spine-2", "spine-3"], dir: [0.15, 0.1, -1], dist: 0.95 },
+  neck: { joints: ["neck"], dir: [0.2, 0.05, 1], dist: 0.5 },
+  "l-thigh": { joints: ["l-upper-leg", "l-knee"], dir: [0.5, 0.05, 1], dist: 0.8 },
+  "l-calf": { joints: ["l-knee", "l-ankle"], dir: [0.5, 0.1, -1], dist: 0.75 },
+};
+$<HTMLSelectElement>("#focus").addEventListener("change", (e) => {
+  const sel = e.target as HTMLSelectElement;
+  const f = FOCUS[sel.value];
+  if (!f || !landmarks) {
+    viewer.frameAll();
+    return;
+  }
+  const t = new THREE.Vector3();
+  for (const j of f.joints) t.add(new THREE.Vector3(...landmarks[j]));
+  t.divideScalar(f.joints.length);
+  t.y += f.dy ?? 0;
+  viewer.focus(t, new THREE.Vector3(...f.dir), f.dist);
 });
 
 $<HTMLInputElement>("#mesh-file").addEventListener("change", async (e) => {
@@ -534,6 +592,7 @@ $<HTMLInputElement>("#mesh-file").addEventListener("change", async (e) => {
     await loadMeshData(data, file.name, { type: "file", name: file.name });
     rawFile = { data, name: file.name };
     syncBodyUI();
+    $<HTMLSelectElement>("#focus").value = "all";
   } catch (err) {
     toast((err as Error).message, true);
   }
@@ -550,7 +609,7 @@ $("#save").addEventListener("click", async () => {
       model = { type: "scan", id: scan.id };
     }
     const state: ProjectState = {
-      model: model.type === "file" ? { type: "body", preset: "m-average", height: 1.76 } : model,
+      model: model.type === "file" ? { type: "body", preset: "m-average", overrides: {} } : model,
       selection: rle([...viewer.selection].sort((a, b) => a - b)),
       layers: editor.serialize(),
     };
@@ -571,11 +630,7 @@ async function openProject(id: string) {
   $<HTMLInputElement>("#project-name").value = p.name;
   const m = p.state.model;
   if (m.type === "scan") await loadScan(m.id);
-  else if (m.type === "body") await loadBody(m.preset, m.height);
-  else if (m.type === "demo") {
-    demoSelect.value = m.id;
-    await loadDemo(m.id);
-  }
+  else if (m.type === "body") await loadBody(m.preset, m.overrides ?? {});
   viewer.setSelection(unrle(p.state.selection));
   await unwrapSelection();
   await editor.deserialize(p.state.layers);
@@ -608,12 +663,18 @@ async function boot() {
   renderLayers();
   const params = new URLSearchParams(location.search);
   try {
+    presets = await bodyApi.presets();
+  } catch {
+    toast("Сервер недоступний: базові тіла не завантажено. Можна відкрити свій 3D-файл.", true);
+  }
+  syncBodyUI();
+  try {
     if (projectId) await openProject(projectId);
     else if (params.get("scan")) await loadScan(params.get("scan")!);
     else await loadBody(params.get("body") ?? "m-average");
   } catch (err) {
     toast((err as Error).message, true);
-    await loadBody("m-average");
+    if (presets.length) await loadBody("m-average");
   }
   api
     .health()

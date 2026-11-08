@@ -99,7 +99,9 @@ export class Viewer {
     this.camera.updateProjectionMatrix();
   }
 
-  setBody(prepared: PreparedBody) {
+  private bodySize = new THREE.Vector3(1, 1, 1);
+
+  setBody(prepared: PreparedBody, keepCamera = false) {
     if (this.body) {
       this.scene.remove(this.body);
       this.body.geometry.disposeBoundsTree();
@@ -127,10 +129,23 @@ export class Viewer {
     );
     this.scene.add(this.body);
     this.refreshColors();
-    this.frame(prepared.size);
+    this.bodySize.copy(prepared.size);
+    if (!keepCamera) this.frame(prepared.size);
   }
 
-  private frame(size: THREE.Vector3) {
+  frameAll() {
+    this.frame(this.bodySize, false);
+  }
+
+  /** Look at `target` from `direction`, `distance` metres away. */
+  focus(target: THREE.Vector3, direction: THREE.Vector3, distance: number) {
+    this.controls.target.copy(target);
+    this.camera.position.copy(target).addScaledVector(direction.clone().normalize(), distance);
+    this.camera.near = 0.01;
+    this.camera.updateProjectionMatrix();
+  }
+
+  private frame(size: THREE.Vector3, resetBrush = true) {
     const radius = Math.max(size.x, size.y, size.z) * 0.6;
     const target = new THREE.Vector3(0, size.y / 2, 0);
     this.controls.target.copy(target);
@@ -139,7 +154,7 @@ export class Viewer {
     this.camera.near = dist / 100;
     this.camera.far = dist * 20;
     this.camera.updateProjectionMatrix();
-    this.brushRadius = Math.max(0.005, Math.min(0.05, radius * 0.08));
+    if (resetBrush) this.brushRadius = Math.max(0.005, Math.min(0.03, radius * 0.08));
   }
 
   setSelection(faces: Iterable<number>) {

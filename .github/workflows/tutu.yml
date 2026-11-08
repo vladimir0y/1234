@@ -35,3 +35,16 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements-dev.txt
       - run: pytest -q
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: [web, server]
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t tutu:ci tutu
+      - name: Smoke test
+        run: |
+          docker run -d -p 8000:8000 --name tutu tutu:ci
+          for i in $(seq 1 30); do curl -sf localhost:8000/api/health && break; sleep 1; done
+          curl -sf "localhost:8000/api/bodies/mesh?preset=f-average" -o /dev/null
+          curl -sf localhost:8000/ | grep -q tutu

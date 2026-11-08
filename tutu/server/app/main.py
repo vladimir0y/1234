@@ -6,10 +6,14 @@ from typing import Any
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from .body import BODY_PRESETS, BodyParams
+from .body.model import build_cached
+from .body.presets import find_preset
 from .config import Settings, get_settings
 from .prompts import STYLES, build_prompt, shape_hint_from_aspect
 from .providers import get_provider
@@ -58,6 +62,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(GZipMiddleware, minimum_size=2048)
 
     def not_found(exc: NotFound) -> HTTPException:
         return HTTPException(status_code=404, detail="Not found")
@@ -70,6 +75,40 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/api/styles")
     def styles() -> list[dict[str, str]]:
         return [{"id": k, "description": v} for k, v in STYLES.items()]
+
+    # --- bodies ---------------------------------------------------------------
+    @app.get("/api/bodies/presets")
+    def body_presets() -> list[dict[str, Any]]:
+        return BODY_PRESETS
+
+    @app.get("/api/bodies/mesh")
+    def body_mesh(
+        preset: str | None = None,
+        sex: float | None = None,
+        height_cm: float | None = None,
+        weight: float | None = None,
+        muscle: float | None = None,
+        breast: float | None = None,
+        glutes: float | None = None,
+        belly: float | None = None,
+    ) -> Response:
+        """Realistic body mesh (TUTB binary). Preset values can be overridden one by one."""
+        values: dict[str, float] = {}
+        if preset:
+            found = find_preset(preset)
+            if not found:
+                raise HTTPException(404, f"Unknown preset '{preset}'")
+            values.update(found["params"])
+        overrides = dict(sex=sex, height_cm=height_cm, weight=weight, muscle=muscle,
+                         breast=breast, glutes=glutes, belly=belly)
+        values.update({k: v for k, v in overrides.items() if v is not None})
+        # Round so near-identical slider values share the cache.
+        params = BodyParams(**{k: round(float(v), 2) for k, v in values.items()}).clamped()
+        return Response(
+            build_cached(params),
+            media_type="application/octet-stream",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
 
     # --- generation -------------------------------------------------------
     @app.post("/api/generate", response_model=GenerateResponse)

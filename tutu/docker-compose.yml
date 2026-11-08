@@ -1,0 +1,12 @@
+# Local run of the whole product: http://localhost:8000
+services:
+  tutu:
+    build: .
+    ports: ["8000:8000"]
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - TUTU_IMAGE_PROVIDER=${TUTU_IMAGE_PROVIDER:-auto}
+    volumes:
+      - tutu-data:/data
+volumes:
+  tutu-data:

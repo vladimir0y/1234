@@ -151,7 +151,9 @@ textarea { width: 100%; resize: vertical; }
 
 .seg-wide { display: flex; width: 100%; margin: 4px 0 8px; }
 .seg-wide button { flex: 1; }
-.slider-wide { display: flex; margin: 10px 0 4px; }
+.slider-wide { display: flex; margin: 8px 0 2px; }
+.slider-wide output { min-width: 82px; text-align: right; }
+.body-sliders { margin-top: 6px; }
 .slider-wide input { flex: 1; width: auto; }
 .body-presets { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 .body-presets button {
