@@ -30,14 +30,16 @@ export class Viewer {
   brushRadius = 0.02; // metres
   showSelection = true;
   readonly selection = new Set<number>();
+  /** Skin colour of the body (user-selectable tone). */
+  readonly skin = SKIN.clone();
   onSelectionChange: (() => void) | null = null;
   onStrokeEnd: (() => void) | null = null;
 
   mesh: MeshData | null = null;
   normals: Float32Array | null = null;
   private body: THREE.Mesh | null = null;
-  private adjacency: FaceAdjacency | null = null;
-  private centroids: Float32Array | null = null;
+  adjacency: FaceAdjacency | null = null;
+  centroids: Float32Array | null = null;
   private patch: THREE.Mesh | null = null;
   private cursor: THREE.Mesh;
   private raycaster = new THREE.Raycaster();
@@ -172,10 +174,10 @@ export class Viewer {
     if (!this.body) return;
     const attr = this.body.geometry.getAttribute("color") as THREE.BufferAttribute;
     const arr = attr.array as Float32Array;
-    const tint = SKIN.clone().lerp(HIGHLIGHT, 0.55);
+    const tint = this.skin.clone().lerp(HIGHLIGHT, 0.5);
     const faces = arr.length / 9;
     for (let f = 0; f < faces; f++) {
-      const c = this.showSelection && this.selection.has(f) ? tint : SKIN;
+      const c = this.showSelection && this.selection.has(f) ? tint : this.skin;
       for (let k = 0; k < 3; k++) {
         arr[9 * f + 3 * k] = c.r;
         arr[9 * f + 3 * k + 1] = c.g;

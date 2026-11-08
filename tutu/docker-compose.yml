@@ -4,8 +4,12 @@ services:
     build: .
     ports: ["8000:8000"]
     environment:
+      - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID:-}
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - TUTU_IMAGE_PROVIDER=${TUTU_IMAGE_PROVIDER:-auto}
+      - POLLINATIONS_KEY=${POLLINATIONS_KEY:-}
+      - AI_HORDE_API_KEY=${AI_HORDE_API_KEY:-}
+      - TUTU_IMAGE_PROVIDERS=${TUTU_IMAGE_PROVIDERS:-auto}
     volumes:
       - tutu-data:/data
 volumes:

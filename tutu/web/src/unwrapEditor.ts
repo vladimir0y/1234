@@ -31,6 +31,9 @@ export interface ImageLayer extends BaseLayer {
   original: HTMLImageElement | HTMLCanvasElement;
   rendered: HTMLCanvasElement; // original or stencil-filtered
   stencil: boolean;
+  /** Stencil line threshold 0..0.6: higher drops faint shading. */
+  threshold: number;
+  flipX: boolean;
   x: number; // centre, metres
   y: number;
   width: number; // metres
@@ -81,6 +84,30 @@ function toCanvas(src: HTMLImageElement | HTMLCanvasElement): HTMLCanvasElement 
   return c;
 }
 
+/** Scale ruler with cm/mm ticks: print it and measure to verify 100% scale. */
+function drawRuler(ctx: CanvasRenderingContext2D, ppm: number, x0: number, y0: number, canvasW: number) {
+  const cm = Math.max(1, Math.min(5, Math.floor((canvasW - x0 * 2) / (ppm * 0.01))));
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.strokeStyle = "#000";
+  ctx.fillStyle = "#000";
+  ctx.lineWidth = Math.max(1, ppm * 0.0002);
+  ctx.beginPath();
+  ctx.moveTo(x0, y0);
+  ctx.lineTo(x0 + cm * 0.01 * ppm, y0);
+  for (let mm = 0; mm <= cm * 10; mm++) {
+    const x = x0 + mm * 0.001 * ppm;
+    const len = mm % 10 === 0 ? 0.003 : mm % 5 === 0 ? 0.002 : 0.001;
+    ctx.moveTo(x, y0);
+    ctx.lineTo(x, y0 + len * ppm);
+  }
+  ctx.stroke();
+  ctx.font = `${Math.round(ppm * 0.0025)}px sans-serif`;
+  ctx.textBaseline = "top";
+  ctx.fillText(`${cm} см — перевірте масштаб друку`, x0, y0 + 0.0042 * ppm);
+  ctx.restore();
+}
+
 /** Edges used by exactly one triangle (the outline of the region). */
 export function boundaryEdges(tris: ArrayLike<number>): Array<[number, number]> {
   const count = new Map<string, [number, number, number]>();
@@ -115,6 +142,8 @@ export class UnwrapEditor {
   showWire = true;
   showHeatmap = false;
   showGrid = true;
+  /** Preview the tattoo as healed (softer, slightly faded) on the 3D body. */
+  healed = false;
 
   geometry: UnwrapGeometry | null = null;
   bounds: Bounds = { minU: 0, minV: 0, maxU: 0.1, maxV: 0.1 };
@@ -240,6 +269,8 @@ export class UnwrapEditor {
       original: img,
       rendered: toCanvas(img),
       stencil: false,
+      threshold: 0.08,
+      flipX: false,
       x: (this.bounds.minU + this.bounds.maxU) / 2,
       y: (this.bounds.minV + this.bounds.maxV) / 2,
       width: w,
@@ -274,13 +305,25 @@ export class UnwrapEditor {
     return layer;
   }
 
-  setStencil(layer: ImageLayer, on: boolean, record = true) {
+  setStencil(layer: ImageLayer, on: boolean, record = true, threshold = layer.threshold) {
     if (record) this.pushHistory();
     layer.stencil = on;
+    layer.threshold = threshold;
     const src = layer.original;
     const w = src instanceof HTMLImageElement ? src.naturalWidth : src.width;
     const h = src instanceof HTMLImageElement ? src.naturalHeight : src.height;
-    layer.rendered = on ? stencilFilter(src, w, h, 0.08) : toCanvas(src);
+    layer.rendered = on ? stencilFilter(src, w, h, threshold) : toCanvas(src);
+    if (record) this.changed();
+    else this.compose();
+  }
+
+  duplicateLayer(id: string) {
+    const l = this.layers.find((x) => x.id === id);
+    if (!l || l.kind !== "image") return;
+    this.pushHistory();
+    const copy: ImageLayer = { ...l, id: newId(), name: `${l.name} (копія)`, x: l.x + l.width * 0.15, y: l.y - l.width * 0.15 };
+    this.layers.splice(this.layers.indexOf(l) + 1, 0, copy);
+    this.activeId = copy.id;
     this.changed();
   }
 
@@ -363,19 +406,19 @@ export class UnwrapEditor {
   }
 
   /** Draw all layers with a metres -> pixels transform. */
-  drawLayers(ctx: CanvasRenderingContext2D, ppm: number, originU: number, originV: number, heightPx: number) {
+  drawLayers(ctx: CanvasRenderingContext2D, ppm: number, originU: number, originV: number, heightPx: number, alphaScale = 1) {
     // px = (u - originU) * ppm ; py = heightPx - (v - originV) * ppm
     const base = new DOMMatrix([ppm, 0, 0, -ppm, -originU * ppm, heightPx + originV * ppm]);
     for (const l of this.layers) {
       if (!l.visible) continue;
       ctx.save();
       ctx.setTransform(base);
-      ctx.globalAlpha = l.opacity;
+      ctx.globalAlpha = l.opacity * alphaScale;
       if (l.kind === "image") {
         const h = l.width * (l.rendered.height / l.rendered.width);
         ctx.translate(l.x, l.y);
         ctx.rotate(l.rotation);
-        ctx.scale(1, -1);
+        ctx.scale(l.flipX ? -1 : 1, -1);
         ctx.drawImage(l.rendered, -l.width / 2, -h / 2, l.width, h);
       } else {
         const b = l.bounds;
@@ -393,7 +436,10 @@ export class UnwrapEditor {
     ctx.clearRect(0, 0, this.texture.width, this.texture.height);
     if (this.geometry) {
       ctx.imageSmoothingQuality = "high";
-      this.drawLayers(ctx, this.texPPM, this.texOrigin.u, this.texOrigin.v, this.texture.height);
+      // Healed look: ink spreads a little under the skin and loses some contrast.
+      if (this.healed) ctx.filter = `blur(${Math.max(0.5, 0.00035 * this.texPPM).toFixed(2)}px)`;
+      this.drawLayers(ctx, this.texPPM, this.texOrigin.u, this.texOrigin.v, this.texture.height, this.healed ? 0.82 : 1);
+      ctx.filter = "none";
     }
     this.onTextureChange?.();
     this.requestDraw();
@@ -760,11 +806,12 @@ export class UnwrapEditor {
     const ppm = dpi / 0.0254;
     const b = this.bounds;
     const margin = 0.005;
-    const W = Math.ceil((b.maxU - b.minU + 2 * margin) * ppm);
+    const rulerSpace = 0.014; // room under the design for the scale ruler
+    const W = Math.ceil(Math.max(b.maxU - b.minU + 2 * margin, 0.06) * ppm);
     const H = Math.ceil((b.maxV - b.minV + 2 * margin) * ppm);
     const c = document.createElement("canvas");
     c.width = W;
-    c.height = H;
+    c.height = H + Math.ceil(rulerSpace * ppm);
     const ctx = c.getContext("2d")!;
     const ou = b.minU - margin;
     const ov = b.minV - margin;
@@ -795,10 +842,16 @@ export class UnwrapEditor {
         ctx.lineJoin = "round";
         ctx.stroke(edges);
       }
-      ctx.fillStyle = "#ffffff";
-      ctx.fill(path);
       ctx.globalCompositeOperation = "source-over";
     }
+    drawRuler(ctx, ppm, margin * ppm, H + 0.004 * ppm, W);
+    // White paper behind everything: prints as-is and the ruler stays visible in any viewer.
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = "destination-over";
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, c.width, c.height);
+    ctx.restore();
     return c;
   }
 
@@ -812,6 +865,8 @@ export class UnwrapEditor {
             visible: l.visible,
             opacity: l.opacity,
             stencil: l.stencil,
+            threshold: l.threshold,
+            flipX: l.flipX,
             x: l.x,
             y: l.y,
             width: l.width,
@@ -850,6 +905,8 @@ export class UnwrapEditor {
           original: img,
           rendered: toCanvas(img),
           stencil: false,
+          threshold: it.threshold ?? 0.08,
+          flipX: it.flipX ?? false,
           x: it.x,
           y: it.y,
           width: it.width,
@@ -857,7 +914,7 @@ export class UnwrapEditor {
         };
         if (it.stencil) {
           layer.stencil = true;
-          layer.rendered = stencilFilter(img, img.naturalWidth, img.naturalHeight, 0.08);
+          layer.rendered = stencilFilter(img, img.naturalWidth, img.naturalHeight, layer.threshold);
         }
         layers.push(layer);
       } else {

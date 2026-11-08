@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { api, bodyApi, type BodyMeshData, type BodyPreset, type BodyPresetParams } from "./api";
 import { extensionOf, MESH_EXTENSIONS, parseMesh, prepareBody } from "./core/loaders";
 import { setPngDpi } from "./core/png";
-import { buildFaceAdjacency, connectedComponents, extractPatch, smoothSelection } from "./core/topology";
+import { acceptedComponents, buildFaceAdjacency, connectedComponents, extractPatch, smoothSelection } from "./core/topology";
 import type { CombinedUnwrap, PatchInput } from "./core/unwrap";
 import { UnwrapEditor, type ImageLayer, type Layer, type Tool } from "./unwrapEditor";
 import { Viewer, type BrushMode } from "./viewer";
@@ -19,6 +19,7 @@ type Sex = "male" | "female";
 interface ProjectState {
   model: BodyModel | { type: "scan"; id: string };
   selection: number[]; // run-length encoded [start, length, ...]
+  up?: [number, number, number]; // unwrap orientation (limb axis for zones)
   layers: ReturnType<UnwrapEditor["serialize"]>;
 }
 
@@ -198,12 +199,15 @@ worker.onmessage = (e: MessageEvent<{ id: number; result?: CombinedUnwrap; error
   pending = null;
 };
 
+/** "Up" for the unwrap: along the limb for limb zones, else world up. */
+let unwrapUp: [number, number, number] = [0, 1, 0];
+
 function runUnwrap(patches: PatchInput[]): Promise<CombinedUnwrap> {
   pending?.reject(new Error("cancelled"));
   const id = ++jobId;
   return new Promise((resolve, reject) => {
     pending = { resolve, reject };
-    worker.postMessage({ id, patches });
+    worker.postMessage({ id, patches, up: unwrapUp });
   });
 }
 
@@ -233,7 +237,8 @@ async function unwrapSelection() {
     if ((err as Error).message !== "cancelled") setInfo((err as Error).message, true);
     return;
   }
-  patchVertices = patches.flatMap((p) => p.vertices);
+  const flat = patches.flatMap((p) => p.vertices);
+  patchVertices = Array.from(result.source, (i) => flat[i]); // cut seams duplicate vertices
   editor.setGeometry({ uv: result.uv, triangles: result.triangles, areaRatio: result.areaRatio });
 
   texture?.dispose();
@@ -244,13 +249,13 @@ async function unwrapSelection() {
 
   const { width, height } = editor.size;
   const quality = result.meanDistortion < 0.05 ? "відмінна" : result.meanDistortion < 0.15 ? "добра" : "помітні спотворення";
-  const ring = result.loops.some((l) => l > 1);
   setInfo(
     `${(width * 100).toFixed(1)} × ${(height * 100).toFixed(1)} см · розгортка: ${quality}` +
       (comps.length > 1 ? ` · ${comps.length} ділянки` : "") +
-      (ring ? " · ділянка-кільце: можливі накладення (шов — у наступній версії)" : ""),
-    ring || result.meanDistortion >= 0.15,
+      (result.cuts ? ` · кільце розрізано швом (${result.cuts})` : ""),
+    result.meanDistortion >= 0.15,
   );
+  markDirty();
 }
 
 editor.onTextureChange = () => {
@@ -259,10 +264,51 @@ editor.onTextureChange = () => {
 
 let unwrapTimer = 0;
 viewer.onStrokeEnd = () => {
+  unwrapUp = [0, 1, 0];
   if (adjacency && viewer.selection.size > 8) viewer.setSelection(smoothSelection(adjacency, viewer.selection));
   clearTimeout(unwrapTimer);
   unwrapTimer = window.setTimeout(unwrapSelection, 60);
 };
+// --- Ready-made zones around limbs, from the body's joint landmarks
+type Zone = { from: string; to: string; t0: number; t1: number; radius: number };
+const ZONES: Record<string, Zone> = {
+  "l-forearm-band": { from: "l-elbow", to: "l-hand", t0: 0.45, t1: 0.72, radius: 0.09 },
+  "l-forearm-sleeve": { from: "l-elbow", to: "l-hand", t0: 0.08, t1: 0.88, radius: 0.09 },
+  "l-upperarm-band": { from: "l-shoulder", to: "l-elbow", t0: 0.4, t1: 0.72, radius: 0.11 },
+  "l-thigh-band": { from: "l-upper-leg", to: "l-knee", t0: 0.35, t1: 0.65, radius: 0.17 },
+  "l-calf-band": { from: "l-knee", to: "l-ankle", t0: 0.45, t1: 0.75, radius: 0.12 },
+};
+$<HTMLSelectElement>("#zone").addEventListener("change", (e) => {
+  const sel = e.target as HTMLSelectElement;
+  const z = ZONES[sel.value];
+  sel.value = "";
+  if (!z) return;
+  if (!landmarks || !viewer.adjacency || !viewer.centroids) return toast("Готові зони доступні для базових тіл", true);
+  const a = landmarks[z.from];
+  const b = landmarks[z.to];
+  const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+  const len2 = d[0] ** 2 + d[1] ** 2 + d[2] ** 2;
+  const c = viewer.centroids;
+  const inZone = (f: number) => {
+    const p = [c[3 * f] - a[0], c[3 * f + 1] - a[1], c[3 * f + 2] - a[2]];
+    const t = (p[0] * d[0] + p[1] * d[1] + p[2] * d[2]) / len2;
+    if (t < z.t0 || t > z.t1) return false;
+    return Math.hypot(p[0] - t * d[0], p[1] - t * d[1], p[2] - t * d[2]) < z.radius;
+  };
+  // Server bodies are quads split into triangle f and f + T/2: keep quads whole
+  // so the zone edge follows the grid instead of a saw-tooth of half-quads.
+  const T = c.length / 3;
+  const half = T / 2;
+  const pair = (f: number) => (f < half ? f + half : f - half);
+  const comps = acceptedComponents(viewer.adjacency, T, (f) => inZone(f) && inZone(pair(f)));
+  if (!comps.length) return toast("Не вдалося знайти зону на цій моделі", true);
+  // Up in the unwrap = towards the body along the limb (elbow above wrist on the stencil).
+  const axis = Math.sqrt(len2);
+  unwrapUp = [-d[0] / axis, -d[1] / axis, -d[2] / axis];
+  viewer.setSelection(smoothSelection(viewer.adjacency, new Set(comps[0]), 2));
+  unwrapSelection();
+});
+
 viewer.onSelectionChange = () => {
   $("#hint3d").style.display = viewer.selection.size ? "none" : "";
 };
@@ -308,6 +354,19 @@ $("#fit").addEventListener("click", () => editor.fit());
 $<HTMLInputElement>("#show-heat").addEventListener("change", (e) => {
   editor.showHeatmap = (e.target as HTMLInputElement).checked;
   editor.requestDraw();
+});
+$<HTMLInputElement>("#healed").addEventListener("change", (e) => {
+  editor.healed = (e.target as HTMLInputElement).checked;
+  editor.compose();
+});
+$$<HTMLButtonElement>("[data-skin]").forEach((b) => {
+  b.style.background = b.dataset.skin!;
+  b.classList.toggle("active", b.dataset.skin === "#e7c1a4");
+  b.addEventListener("click", () => {
+    viewer.skin.set(b.dataset.skin!);
+    viewer.refreshColors();
+    $$("[data-skin]").forEach((x) => x.classList.toggle("active", x === b));
+  });
 });
 $<HTMLInputElement>("#show-wire").addEventListener("change", (e) => {
   editor.showWire = (e.target as HTMLInputElement).checked;
@@ -385,6 +444,12 @@ function renderLayerProps(l: Layer | null) {
   slider("Прозорість", 0, 1, 0.01, l.opacity, (v) => `${Math.round(v * 100)}%`, (v) => editor.updateLayer(l, { opacity: v }, false));
   if (l.kind === "image") {
     const img = l as ImageLayer;
+    const actions = document.createElement("div");
+    actions.className = "layer-actions";
+    actions.innerHTML = `<button class="small" data-a="flip" title="Дзеркально">⇋ Дзеркало</button><button class="small" data-a="dup" title="Копія шару">⧉ Копія</button>`;
+    actions.querySelector('[data-a="flip"]')!.addEventListener("click", () => editor.updateLayer(img, { flipX: !img.flipX }));
+    actions.querySelector('[data-a="dup"]')!.addEventListener("click", () => editor.duplicateLayer(img.id));
+    box.appendChild(actions);
     slider("Ширина", 0.5, 60, 0.1, img.width * 100, (v) => `${v.toFixed(1)} см`, (v) => editor.updateLayer(img, { width: v / 100 }, false));
     slider("Поворот", -180, 180, 1, (img.rotation * 180) / Math.PI, (v) => `${Math.round(v)}°`, (v) =>
       editor.updateLayer(img, { rotation: (v * Math.PI) / 180 }, false),
@@ -394,9 +459,14 @@ function renderLayerProps(l: Layer | null) {
     st.innerHTML = `<input type="checkbox" ${img.stencil ? "checked" : ""}/> трафарет (чорна лінія, без фону)`;
     st.querySelector("input")!.addEventListener("change", (e) => editor.setStencil(img, (e.target as HTMLInputElement).checked));
     box.appendChild(st);
+    if (img.stencil)
+      slider("Поріг лінії", 0, 0.6, 0.01, img.threshold, (v) => `${Math.round(v * 100)}%`, (v) => editor.setStencil(img, true, false, v));
   }
 }
-editor.onLayersChange = renderLayers;
+editor.onLayersChange = () => {
+  renderLayers();
+  markDirty();
+};
 
 $("#add-ink").addEventListener("click", () => {
   if (!editor.geometry) return toast("Спершу виділіть ділянку на тілі", true);
@@ -414,47 +484,87 @@ $<HTMLInputElement>("#image-file").addEventListener("change", async (e) => {
 
 // ---------------------------------------------------------------------------
 // Generation
-const STYLE_LABELS: Record<string, string> = {
-  "fine-line": "Fine line",
-  blackwork: "Blackwork",
-  traditional: "Traditional",
-  geometric: "Геометрія",
-  watercolor: "Акварель",
-  minimal: "Мінімалізм",
-  japanese: "Японський",
-  realism: "Реалізм",
-};
 const styleSelect = $<HTMLSelectElement>("#style");
-for (const [id, label] of Object.entries(STYLE_LABELS)) styleSelect.add(new Option(label, id));
+const providerSelect = $<HTMLSelectElement>("#provider");
+const MOTIFS = ["троянда", "півонія", "змія", "метелик", "ластівка", "місяць і зорі", "вовк", "лотос", "дракон", "компас", "хвиля", "гори"];
+for (const m of MOTIFS) {
+  const chip = document.createElement("button");
+  chip.className = "chip";
+  chip.textContent = m;
+  chip.addEventListener("click", () => {
+    const ta = $<HTMLTextAreaElement>("#prompt");
+    ta.value = ta.value.trim() ? `${ta.value.trim()}, ${m}` : m;
+  });
+  $("#prompt-chips").appendChild(chip);
+}
+
+async function loadGenerators() {
+  const [styles, providers] = await Promise.all([api.styles(), api.providers()]);
+  styleSelect.innerHTML = "";
+  for (const s of styles) styleSelect.add(new Option(`${s.label}${s.mode === "color" ? " · колір" : ""}`, s.id));
+  providerSelect.innerHTML = "";
+  providerSelect.add(new Option("Генератор: авто", ""));
+  for (const p of providers) providerSelect.add(new Option(`${p.label}${p.free ? "" : " 💳"}`, p.id));
+  const offline = providers.length === 1 && providers[0].id === "mock";
+  $("#gen-status").textContent = offline
+    ? "Генератори не налаштовані — працює офлайн-заглушка. Див. README: безкоштовний Cloudflare FLUX."
+    : "";
+}
+
+function addToGallery(img: HTMLImageElement, title: string) {
+  const thumb = document.createElement("button");
+  thumb.title = `${title} — натисніть, щоб накласти`;
+  thumb.appendChild(img.cloneNode());
+  thumb.addEventListener("click", () => {
+    if (!editor.geometry) return toast("Спершу виділіть ділянку на тілі", true);
+    editor.addImageLayer(img, title.slice(0, 40));
+  });
+  $("#gallery").prepend(thumb);
+}
 
 $("#generate").addEventListener("click", async () => {
   const prompt = $<HTMLTextAreaElement>("#prompt").value.trim();
   if (prompt.length < 2) return toast("Опишіть, що згенерувати", true);
   const btn = $<HTMLButtonElement>("#generate");
   btn.disabled = true;
-  $("#gen-status").textContent = "Генерую ескіз…";
+  const status = $("#gen-status");
+  status.textContent = "Ставлю в чергу…";
+  const added = new Set<string>();
+  let first = true;
+  const take = async (images: { image_id: string; url: string }[]) => {
+    for (const im of images) {
+      if (added.has(im.image_id)) continue;
+      added.add(im.image_id);
+      const img = await loadImage(api.url(im.url));
+      addToGallery(img, prompt);
+      // The first variant goes straight onto the body; the rest wait in the gallery.
+      if (first && editor.geometry) editor.addImageLayer(img, prompt.slice(0, 40));
+      first = false;
+    }
+  };
   try {
     const { width, height } = editor.size;
-    const res = await api.generate({
-      prompt,
-      style: styleSelect.value,
-      region_aspect: editor.geometry ? width / height : undefined,
-    });
-    const img = await loadImage(api.url(res.url));
-    $("#gen-status").textContent = `Готово (${res.provider}). Натисніть на ескіз, щоб додати ще раз.`;
-    const thumb = document.createElement("button");
-    thumb.title = prompt;
-    thumb.appendChild(img.cloneNode());
-    thumb.addEventListener("click", () => {
-      if (!editor.geometry) return toast("Спершу виділіть ділянку на тілі", true);
-      editor.addImageLayer(img, prompt.slice(0, 40), true);
-    });
-    $("#gallery").prepend(thumb);
-    if (editor.geometry) editor.addImageLayer(img, prompt.slice(0, 40), true);
-    else toast("Ескіз у галереї. Виділіть ділянку, щоб накласти його");
+    const job = await api.generate(
+      {
+        prompt,
+        style: styleSelect.value,
+        variants: Number($<HTMLSelectElement>("#variants").value),
+        region_aspect: editor.geometry ? width / height : undefined,
+        provider: providerSelect.value || undefined,
+      },
+      (j) => {
+        status.textContent = j.message;
+        take(j.images);
+      },
+    );
+    await take(job.images);
+    if (job.status === "error") throw new Error(job.errors.at(-1) ?? job.message);
+    const providers = [...new Set(job.images.map((i) => i.provider))].join(", ");
+    status.textContent = `Готово: ${job.images.length} вар. (${providers}). Інші варіанти — у галереї нижче.`;
+    if (!editor.geometry) toast("Ескізи в галереї. Виділіть ділянку, щоб накласти");
   } catch (err) {
-    $("#gen-status").textContent = "";
-    toast(`Генерація не вдалася: ${(err as Error).message}. Чи запущено сервер?`, true);
+    status.textContent = "";
+    toast(`Генерація не вдалася: ${(err as Error).message}`, true);
   } finally {
     btn.disabled = false;
   }
@@ -600,6 +710,22 @@ $<HTMLInputElement>("#mesh-file").addEventListener("change", async (e) => {
 
 // ---------------------------------------------------------------------------
 // Projects
+// Unsaved-changes guard and Ctrl+S.
+let dirty = false;
+let booted = false;
+function markDirty() {
+  if (booted) dirty = true;
+}
+window.addEventListener("beforeunload", (e) => {
+  if (dirty) e.preventDefault();
+});
+window.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+    e.preventDefault();
+    $<HTMLButtonElement>("#save").click();
+  }
+});
+
 $("#save").addEventListener("click", async () => {
   const btn = $<HTMLButtonElement>("#save");
   btn.disabled = true;
@@ -611,12 +737,14 @@ $("#save").addEventListener("click", async () => {
     const state: ProjectState = {
       model: model.type === "file" ? { type: "body", preset: "m-average", overrides: {} } : model,
       selection: rle([...viewer.selection].sort((a, b) => a - b)),
+      up: unwrapUp,
       layers: editor.serialize(),
     };
     const name = $<HTMLInputElement>("#project-name").value || "Без назви";
     const saved = await api.saveProject(projectId, { name, scan_id: model.type === "scan" ? model.id : null, state });
     projectId = saved.id;
     history.replaceState(null, "", `?project=${saved.id}`);
+    dirty = false;
     toast("Проєкт збережено");
   } catch (err) {
     toast(`Не вдалося зберегти: ${(err as Error).message}`, true);
@@ -631,6 +759,7 @@ async function openProject(id: string) {
   const m = p.state.model;
   if (m.type === "scan") await loadScan(m.id);
   else if (m.type === "body") await loadBody(m.preset, m.overrides ?? {});
+  unwrapUp = p.state.up ?? [0, 1, 0];
   viewer.setSelection(unrle(p.state.selection));
   await unwrapSelection();
   await editor.deserialize(p.state.layers);
@@ -676,9 +805,8 @@ async function boot() {
     toast((err as Error).message, true);
     if (presets.length) await loadBody("m-average");
   }
-  api
-    .health()
-    .then((h) => ($("#gen-status").textContent = h.image_provider === "mock" ? "Сервер: офлайн-генератор (без API-ключа)" : ""))
-    .catch(() => ($("#gen-status").textContent = "Сервер недоступний — генерація вимкнена"));
+  booted = true;
+  dirty = false;
+  loadGenerators().catch(() => ($("#gen-status").textContent = "Сервер недоступний — генерація вимкнена"));
 }
 boot();

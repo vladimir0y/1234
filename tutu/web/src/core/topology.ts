@@ -224,3 +224,212 @@ export function smoothSelection(adj: FaceAdjacency, selection: Set<number>, iter
   }
   return current;
 }
+
+/** Closed boundary loops of a patch, each as an ordered-ish vertex list. */
+export function boundaryLoops(triangles: ArrayLike<number>, vertexCount: number): number[][] {
+  const n = vertexCount + 1;
+  const use = new Map<number, number>();
+  for (let t = 0; t < triangles.length; t += 3)
+    for (let k = 0; k < 3; k++) {
+      const a = triangles[t + k];
+      const b = triangles[t + ((k + 1) % 3)];
+      const key = a < b ? a * n + b : b * n + a;
+      use.set(key, (use.get(key) ?? 0) + 1);
+    }
+  const adj = new Map<number, number[]>();
+  for (const [key, c] of use) {
+    if (c !== 1) continue;
+    const a = Math.floor(key / n);
+    const b = key % n;
+    (adj.get(a) ?? adj.set(a, []).get(a)!).push(b);
+    (adj.get(b) ?? adj.set(b, []).get(b)!).push(a);
+  }
+  const seen = new Set<number>();
+  const loops: number[][] = [];
+  for (const start of adj.keys()) {
+    if (seen.has(start)) continue;
+    const loop: number[] = [];
+    const stack = [start];
+    seen.add(start);
+    while (stack.length) {
+      const v = stack.pop()!;
+      loop.push(v);
+      for (const w of adj.get(v)!) if (!seen.has(w)) (seen.add(w), stack.push(w));
+    }
+    loops.push(loop);
+  }
+  return loops.sort((a, b) => b.length - a.length);
+}
+
+export interface CutResult {
+  triangles: Uint32Array;
+  /** New vertex index -> original vertex index. */
+  source: Uint32Array;
+  cuts: number;
+}
+
+/**
+ * Turn a patch with several boundaries (a ring around the arm, a region with
+ * holes) into a disk by cutting along shortest edge paths between boundaries.
+ * Vertices on a cut are duplicated, so LSCM can lay the ring out as a strip.
+ */
+export function cutToDisk(positions: ArrayLike<number>, triangles: ArrayLike<number>, vertexCount: number): CutResult {
+  let tris = Uint32Array.from(triangles);
+  const source: number[] = Array.from({ length: vertexCount }, (_, i) => i);
+  let cuts = 0;
+  for (let guard = 0; guard < 16; guard++) {
+    const loops = boundaryLoops(tris, source.length);
+    if (loops.length <= 1) break;
+    const path = shortestPathBetween(positions, source, tris, loops[0], new Set(loops.slice(1).flat()));
+    if (!path) break;
+    tris = cutAlong(tris, path, source);
+    cuts++;
+  }
+  return { triangles: tris, source: Uint32Array.from(source), cuts };
+}
+
+function vertexNeighbors(tris: ArrayLike<number>, n: number): number[][] {
+  const nb: Set<number>[] = Array.from({ length: n }, () => new Set());
+  for (let t = 0; t < tris.length; t += 3)
+    for (let k = 0; k < 3; k++) {
+      const a = tris[t + k];
+      const b = tris[t + ((k + 1) % 3)];
+      nb[a].add(b);
+      nb[b].add(a);
+    }
+  return nb.map((s) => [...s]);
+}
+
+function shortestPathBetween(
+  positions: ArrayLike<number>,
+  source: number[],
+  tris: ArrayLike<number>,
+  from: number[],
+  targets: Set<number>,
+): number[] | null {
+  const n = source.length;
+  const nb = vertexNeighbors(tris, n);
+  const dist = new Float64Array(n).fill(Infinity);
+  const prev = new Int32Array(n).fill(-1);
+  const P = (v: number, c: number) => positions[3 * source[v] + c];
+  // Small binary heap.
+  const heap: Array<[number, number]> = [];
+  const push = (d: number, v: number) => {
+    heap.push([d, v]);
+    let i = heap.length - 1;
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (heap[p][0] <= heap[i][0]) break;
+      [heap[p], heap[i]] = [heap[i], heap[p]];
+      i = p;
+    }
+  };
+  const pop = () => {
+    const top = heap[0];
+    const last = heap.pop()!;
+    if (heap.length) {
+      heap[0] = last;
+      let i = 0;
+      for (;;) {
+        const l = 2 * i + 1;
+        const r = l + 1;
+        let m = i;
+        if (l < heap.length && heap[l][0] < heap[m][0]) m = l;
+        if (r < heap.length && heap[r][0] < heap[m][0]) m = r;
+        if (m === i) break;
+        [heap[m], heap[i]] = [heap[i], heap[m]];
+        i = m;
+      }
+    }
+    return top;
+  };
+  for (const v of from) {
+    dist[v] = 0;
+    push(0, v);
+  }
+  while (heap.length) {
+    const [d, v] = pop();
+    if (d > dist[v]) continue;
+    if (targets.has(v)) {
+      const path = [v];
+      let u = prev[v];
+      while (u >= 0) {
+        path.push(u);
+        u = prev[u];
+      }
+      return path.reverse();
+    }
+    for (const w of nb[v]) {
+      const nd = d + Math.hypot(P(v, 0) - P(w, 0), P(v, 1) - P(w, 1), P(v, 2) - P(w, 2));
+      if (nd < dist[w]) {
+        dist[w] = nd;
+        prev[w] = v;
+        push(nd, w);
+      }
+    }
+  }
+  return null;
+}
+
+/** Duplicate the vertices along `path` so the surface opens along it. */
+function cutAlong(tris: Uint32Array, path: number[], source: number[]): Uint32Array<ArrayBuffer> {
+  const out = Uint32Array.from(tris);
+  const T = tris.length / 3;
+  const onPath = new Set<string>();
+  for (let i = 0; i + 1 < path.length; i++) {
+    const a = path[i];
+    const b = path[i + 1];
+    onPath.add(a < b ? `${a}_${b}` : `${b}_${a}`);
+  }
+  const facesOf = new Map<number, number[]>();
+  for (let t = 0; t < T; t++)
+    for (let k = 0; k < 3; k++) {
+      const v = tris[3 * t + k];
+      (facesOf.get(v) ?? facesOf.set(v, []).get(v)!).push(t);
+    }
+  for (const v of path) {
+    const fan = facesOf.get(v) ?? [];
+    // Group the faces around v: neighbours across an edge (v, w) that is not on the cut.
+    const group = new Map<number, number>();
+    let groups = 0;
+    for (const f of fan) {
+      if (group.has(f)) continue;
+      const stack = [f];
+      group.set(f, groups);
+      while (stack.length) {
+        const g = stack.pop()!;
+        for (let k = 0; k < 3; k++) {
+          const w = tris[3 * g + k];
+          if (w === v) continue;
+          const key = v < w ? `${v}_${w}` : `${w}_${v}`;
+          if (onPath.has(key)) continue;
+          for (const h of fan) {
+            if (group.has(h)) continue;
+            if (tris[3 * h] === w || tris[3 * h + 1] === w || tris[3 * h + 2] === w) {
+              group.set(h, groups);
+              stack.push(h);
+            }
+          }
+        }
+      }
+      groups++;
+    }
+    // Every group after the first gets its own copy of v.
+    for (let g = 1; g < groups; g++) {
+      const copy = source.length;
+      source.push(source[v]);
+      for (const [f, gi] of group) {
+        if (gi !== g) continue;
+        for (let k = 0; k < 3; k++) if (out[3 * f + k] === v) out[3 * f + k] = copy;
+      }
+    }
+  }
+  return out;
+}
+
+/** Edge-connected faces satisfying `accept`, grouped; largest group first. */
+export function acceptedComponents(adj: FaceAdjacency, faceCount: number, accept: (f: number) => boolean): number[][] {
+  const faces: number[] = [];
+  for (let f = 0; f < faceCount; f++) if (accept(f)) faces.push(f);
+  return connectedComponents(adj, faces);
+}

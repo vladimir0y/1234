@@ -142,3 +142,46 @@ describe("smoothSelection", () => {
     expect(out.has(45)).toBe(true);
   });
 });
+
+describe("ring cutting", () => {
+  it("unwraps a full ring around a cylinder (armband) into a strip of the real size", async () => {
+    const { unwrapPatches } = await import("../src/core/unwrap");
+    const R = 0.04, H = 0.05, N = 48;
+    // Closed ring: last column wraps to the first.
+    const positions: number[] = [];
+    const tris: number[] = [];
+    for (let j = 0; j <= 6; j++) for (let i = 0; i < N; i++) {
+      const a = (2 * Math.PI * i) / N;
+      positions.push(R * Math.cos(a), (H * j) / 6, R * Math.sin(a));
+    }
+    const id = (i: number, j: number) => j * N + (i % N);
+    for (let j = 0; j < 6; j++) for (let i = 0; i < N; i++) {
+      tris.push(id(i, j), id(i, j + 1), id(i + 1, j + 1), id(i, j), id(i + 1, j + 1), id(i + 1, j));
+    }
+    const r = unwrapPatches([{ positions: new Float64Array(positions), triangles: new Uint32Array(tris) }]);
+    expect(r.loops).toEqual([2]);
+    expect(r.cuts).toBe(1);
+    expect(r.source.length).toBe(N * 7 + 7); // one seam column duplicated
+    let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity;
+    for (let i = 0; i < r.uv.length; i += 2) {
+      minU = Math.min(minU, r.uv[i]); maxU = Math.max(maxU, r.uv[i]);
+      minV = Math.min(minV, r.uv[i + 1]); maxV = Math.max(maxV, r.uv[i + 1]);
+    }
+    const circ = 2 * N * R * Math.sin(Math.PI / N); // polygon perimeter
+    expect(maxU - minU).toBeCloseTo(circ, 2);
+    expect(maxV - minV).toBeCloseTo(H, 2);
+    expect(r.meanDistortion).toBeLessThan(0.02);
+    for (let t = 0; t < r.triangles.length / 3; t++) expect(uvSignedArea(r.uv, r.triangles, t)).toBeGreaterThan(0);
+  });
+
+  it("opens a region with a hole", async () => {
+    const { cutToDisk, boundaryLoops } = await import("../src/core/topology");
+    const m = grid(10, 10, (u, v) => [u, v, 0]);
+    const hole = new Set<number>();
+    for (const [i, j] of [[4, 4], [5, 4], [4, 5], [5, 5]]) { hole.add(2 * (j * 10 + i)); hole.add(2 * (j * 10 + i) + 1); }
+    const ring = extractPatch(m, Array.from({ length: 200 }, (_, i) => i).filter((f) => !hole.has(f)));
+    const cut = cutToDisk(ring.positions, ring.triangles, ring.vertices.length);
+    expect(cut.cuts).toBe(1);
+    expect(boundaryLoops(cut.triangles, cut.source.length)).toHaveLength(1);
+  });
+});

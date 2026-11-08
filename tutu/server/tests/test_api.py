@@ -12,7 +12,8 @@ from app.prompts import build_prompt, shape_hint_from_aspect
 @pytest.fixture()
 def client(tmp_path):
     settings = Settings(data_dir=tmp_path, image_provider="mock", openai_api_key=None)
-    return TestClient(create_app(settings))
+    with TestClient(create_app(settings)) as c:
+        yield c
 
 
 def test_health(client):
@@ -21,24 +22,35 @@ def test_health(client):
     assert r.json()["image_provider"] == "mock"
 
 
-def test_generate_returns_transparent_png(client):
-    r = client.post("/api/generate", json={"prompt": "lotus flower", "style": "geometric", "size": 256})
+def run_job(client, body):
+    import time
+    r = client.post("/api/generate", json=body)
     assert r.status_code == 200, r.text
-    body = r.json()
-    assert "geometric" in body["prompt"]
-    img = client.get(body["url"])
+    job = r.json()
+    for _ in range(200):
+        job = client.get(f"/api/jobs/{job['id']}").json()
+        if job["status"] in ("done", "error"):
+            return job
+        time.sleep(0.02)
+    raise AssertionError("job did not finish")
+
+
+def test_generate_job_returns_transparent_pngs(client):
+    job = run_job(client, {"prompt": "lotus flower", "style": "geometric", "size": 256, "variants": 2})
+    assert job["status"] == "done", job
+    assert len(job["images"]) == 2 and job["images"][0]["provider"] == "mock"
+    assert "geometric" in job["prompt"]
+    img = client.get(job["images"][0]["url"])
     assert img.headers["content-type"] == "image/png"
     im = Image.open(io.BytesIO(img.content))
-    assert im.size == (256, 256)
     assert im.mode == "RGBA"
-    alpha = im.getchannel("A")
-    assert alpha.getextrema() == (0, 255)  # has both empty and inked pixels
+    assert im.getchannel("A").getextrema() == (0, 255)
 
 
 def test_generate_is_deterministic_with_seed(client):
-    a = client.post("/api/generate", json={"prompt": "moth", "size": 256, "seed": 7}).json()
-    b = client.post("/api/generate", json={"prompt": "moth", "size": 256, "seed": 7}).json()
-    assert client.get(a["url"]).content == client.get(b["url"]).content
+    a = run_job(client, {"prompt": "moth", "size": 256, "seed": 7, "variants": 1})
+    b = run_job(client, {"prompt": "moth", "size": 256, "seed": 7, "variants": 1})
+    assert client.get(a["images"][0]["url"]).content == client.get(b["images"][0]["url"]).content
 
 
 def test_generate_rejects_unknown_style(client):
@@ -46,9 +58,15 @@ def test_generate_rejects_unknown_style(client):
     assert r.status_code == 400
 
 
-def test_openai_without_key_is_400(client):
+def test_unconfigured_provider_is_400(client):
     r = client.post("/api/generate", json={"prompt": "moth", "provider": "openai"})
     assert r.status_code == 400
+
+
+def test_styles_and_providers(client):
+    styles = client.get("/api/styles").json()
+    assert len(styles) >= 12 and {s["mode"] for s in styles} == {"ink", "color"}
+    assert client.get("/api/providers").json() == [{"id": "mock", "label": "Офлайн-орнамент (для розробки)", "free": True}]
 
 
 def test_scan_upload_roundtrip(client):
@@ -88,5 +106,6 @@ def test_prompt_building():
     assert shape_hint_from_aspect(1.0) == "roughly square"
     assert shape_hint_from_aspect(None) is None
     p = build_prompt("wolf", "blackwork", "tall vertical")
-    assert p.startswith("wolf, bold blackwork")
-    assert "tall vertical" in p and "white background" in p
+    assert p.startswith("flash sheet illustration on white paper of wolf, bold blackwork")
+    assert "tall vertical" in p and "white background" in p and "black ink only" in p
+    assert "black ink only" not in build_prompt("koi", "japanese")

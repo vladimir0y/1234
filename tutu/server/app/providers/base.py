@@ -3,33 +3,26 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from ..config import Settings
+
+class ProviderError(Exception):
+    """Generation failed; the next provider in the chain may be tried."""
+
+
+class RateLimited(ProviderError):
+    pass
 
 
 @dataclass
-class GeneratedImage:
-    png: bytes
-    provider: str
+class ImageRequest:
     prompt: str
+    negative: str
+    size: int
+    seed: int
 
 
 class ImageProvider(Protocol):
     name: str
+    label: str
+    free: bool
 
-    async def generate(self, prompt: str, size: int, seed: int | None) -> bytes: ...
-
-
-def get_provider(settings: Settings, name: str | None = None) -> ImageProvider:
-    from .mock import MockProvider
-    from .openai_images import OpenAIProvider
-
-    choice = (name or settings.image_provider or "auto").lower()
-    if choice == "auto":
-        choice = "openai" if settings.openai_api_key else "mock"
-    if choice == "openai":
-        if not settings.openai_api_key:
-            raise ValueError("OPENAI_API_KEY is not set")
-        return OpenAIProvider(settings.openai_api_key, settings.openai_image_model)
-    if choice == "mock":
-        return MockProvider()
-    raise ValueError(f"Unknown image provider: {choice}")
+    async def generate(self, req: ImageRequest) -> bytes: ...

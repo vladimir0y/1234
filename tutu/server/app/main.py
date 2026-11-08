@@ -15,8 +15,10 @@ from .body import BODY_PRESETS, BodyParams
 from .body.model import build_cached
 from .body.presets import find_preset
 from .config import Settings, get_settings
-from .prompts import STYLES, build_prompt, shape_hint_from_aspect
-from .providers import get_provider
+from .jobs import JobRunner
+from .prompts import NEGATIVE, STYLES, STYLES_LIST, build_prompt, needs_translation, shape_hint_from_aspect
+from .providers import build_provider, provider_chain
+from .providers.cloudflare import CloudflareProvider
 from .storage import NotFound, Storage
 
 MEDIA_TYPES = {
@@ -34,15 +36,9 @@ class GenerateRequest(BaseModel):
     style: str = "fine-line"
     size: int = Field(default=1024, ge=256, le=2048)
     seed: int | None = None
+    variants: int = Field(default=2, ge=1, le=4)
     region_aspect: float | None = Field(default=None, gt=0, le=50)
     provider: str | None = None
-
-
-class GenerateResponse(BaseModel):
-    image_id: str
-    url: str
-    provider: str
-    prompt: str
 
 
 class ProjectBody(BaseModel):
@@ -55,6 +51,7 @@ class ProjectBody(BaseModel):
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     storage = Storage(settings.data_dir)
+    jobs = JobRunner(storage)
     app = FastAPI(title="Tutu API", version="0.1.0")
     app.add_middleware(
         CORSMiddleware,
@@ -69,12 +66,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/api/health")
     def health() -> dict[str, Any]:
-        provider = get_provider(settings).name
-        return {"ok": True, "image_provider": provider}
+        chain = provider_chain(settings)
+        return {"ok": True, "image_provider": chain[0].name if chain else None}
+
+    @app.get("/api/providers")
+    def providers() -> list[dict[str, Any]]:
+        """Configured generators in the order they are tried."""
+        return [{"id": p.name, "label": p.label, "free": p.free} for p in provider_chain(settings)]
 
     @app.get("/api/styles")
     def styles() -> list[dict[str, str]]:
-        return [{"id": k, "description": v} for k, v in STYLES.items()]
+        return [{"id": s.id, "label": s.label, "mode": s.mode, "description": s.prompt} for s in STYLES_LIST]
 
     # --- bodies ---------------------------------------------------------------
     @app.get("/api/bodies/presets")
@@ -111,23 +113,37 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
 
     # --- generation -------------------------------------------------------
-    @app.post("/api/generate", response_model=GenerateResponse)
-    async def generate(req: GenerateRequest) -> GenerateResponse:
-        if req.style not in STYLES:
+    @app.post("/api/generate")
+    async def generate(req: GenerateRequest) -> dict[str, Any]:
+        """Start a generation job; poll GET /api/jobs/{id}."""
+        style = STYLES.get(req.style)
+        if not style:
             raise HTTPException(400, f"Unknown style '{req.style}'")
-        try:
-            provider = get_provider(settings, req.provider)
-        except ValueError as e:
-            raise HTTPException(400, str(e)) from e
+        if req.provider and build_provider(req.provider, settings) is None:
+            raise HTTPException(400, f"Provider '{req.provider}' is not configured")
+        chain = provider_chain(settings, req.provider)
+        translator = build_provider("cloudflare", settings)
+
+        async def prepare(text: str) -> str:
+            # FLUX/SDXL understand English best; translate Ukrainian when we can.
+            if needs_translation(req.prompt) and isinstance(translator, CloudflareProvider):
+                try:
+                    translated = await translator.translate(req.prompt)
+                    return text.replace(req.prompt.strip(), translated.strip(), 1)
+                except Exception:
+                    return text
+            return text
+
         prompt = build_prompt(req.prompt, req.style, shape_hint_from_aspect(req.region_aspect))
-        try:
-            png = await provider.generate(prompt, req.size, req.seed)
-        except Exception as e:  # provider/network failures
-            raise HTTPException(502, f"Generation failed: {e}") from e
-        image_id = storage.save_image(png)
-        return GenerateResponse(
-            image_id=image_id, url=f"/api/images/{image_id}", provider=provider.name, prompt=prompt
-        )
+        job = jobs.submit(chain, prompt, NEGATIVE, style.mode, req.variants, req.seed, req.size, prepare)
+        return job.public()
+
+    @app.get("/api/jobs/{job_id}")
+    def job_status(job_id: str) -> dict[str, Any]:
+        job = jobs.get(job_id)
+        if not job:
+            raise HTTPException(404, "Not found")
+        return job.public()
 
     @app.get("/api/images/{image_id}")
     def get_image(image_id: str) -> FileResponse:

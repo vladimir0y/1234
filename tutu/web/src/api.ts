@@ -1,9 +1,18 @@
 /** Thin client for the Tutu backend. */
 
-export interface GenerateResult {
+export interface GeneratedImage {
   image_id: string;
   url: string;
   provider: string;
+  seed: number;
+}
+
+export interface GenerationJob {
+  id: string;
+  status: "queued" | "running" | "done" | "error";
+  message: string;
+  images: GeneratedImage[];
+  errors: string[];
   prompt: string;
 }
 
@@ -44,14 +53,28 @@ export const api = {
 
   health: () => fetch(`${BASE}/api/health`).then((r) => json<{ ok: boolean; image_provider: string }>(r)),
 
-  styles: () => fetch(`${BASE}/api/styles`).then((r) => json<Array<{ id: string; description: string }>>(r)),
 
-  generate: (body: { prompt: string; style: string; region_aspect?: number; seed?: number }) =>
-    fetch(`${BASE}/api/generate`, {
+  styles: () => fetch(`${BASE}/api/styles`).then((r) => json<Array<{ id: string; label: string; mode: "ink" | "color" }>>(r)),
+
+  providers: () => fetch(`${BASE}/api/providers`).then((r) => json<Array<{ id: string; label: string; free: boolean }>>(r)),
+
+  /** Start a job and poll until it finishes; `onProgress` gets status messages. */
+  generate: async (
+    body: { prompt: string; style: string; variants: number; region_aspect?: number; provider?: string },
+    onProgress: (job: GenerationJob) => void,
+  ): Promise<GenerationJob> => {
+    let job = await fetch(`${BASE}/api/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ size: 1024, ...body }),
-    }).then((r) => json<GenerateResult>(r)),
+    }).then((r) => json<GenerationJob>(r));
+    while (job.status === "queued" || job.status === "running") {
+      await new Promise((r) => setTimeout(r, 1200));
+      job = await fetch(`${BASE}/api/jobs/${job.id}`).then((r) => json<GenerationJob>(r));
+      onProgress(job); // finished variants show up before the whole job is done
+    }
+    return job;
+  },
 
   uploadScan: (data: Blob, filename: string, name: string) => {
     const form = new FormData();

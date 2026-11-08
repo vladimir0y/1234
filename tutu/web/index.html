@@ -27,6 +27,14 @@
             <button data-mode="erase" title="Кисть: прибрати з ділянки">Стерти</button>
           </div>
           <label class="slider">Кисть <input id="brush3d" type="range" min="3" max="80" value="20" /><output id="brush3d-out">2 см</output></label>
+          <select id="zone" aria-label="Готова зона" title="Виділити готову зону">
+            <option value="">Готова зона…</option>
+            <option value="l-forearm-band">Браслет на передпліччі</option>
+            <option value="l-forearm-sleeve">Передпліччя навколо</option>
+            <option value="l-upperarm-band">Кільце на плечі</option>
+            <option value="l-thigh-band">Кільце на стегні</option>
+            <option value="l-calf-band">Браслет на гомілці</option>
+          </select>
           <button id="clear-selection" class="ghost">Очистити</button>
           <label class="check"><input id="show-selection" type="checkbox" checked /> підсвітка</label>
         </div>
@@ -47,6 +55,7 @@
           <button id="fit" class="ghost" title="Вмістити">⤢</button>
           <label class="check"><input id="show-heat" type="checkbox" /> спотворення</label>
           <label class="check"><input id="show-wire" type="checkbox" checked /> сітка</label>
+          <label class="check" title="Як тату виглядатиме після загоєння"><input id="healed" type="checkbox" /> загоєне</label>
         </div>
         <div id="unwrap" class="viewport"></div>
         <div id="region-info" class="hint">Розгортка ділянки — тут малюєте і розміщуєте ескіз</div>
@@ -81,6 +90,15 @@
               <option value="l-calf">Гомілка</option>
             </select>
           </div>
+          <div class="skin-row" role="group" aria-label="Тон шкіри">
+            <span class="muted">Шкіра</span>
+            <button class="swatch" data-skin="#f3d6c4" title="Дуже світла"></button>
+            <button class="swatch" data-skin="#e7c1a4" title="Світла"></button>
+            <button class="swatch" data-skin="#d2a079" title="Середня"></button>
+            <button class="swatch" data-skin="#b07a52" title="Оливкова"></button>
+            <button class="swatch" data-skin="#8a5636" title="Темна"></button>
+            <button class="swatch" data-skin="#5c3a26" title="Дуже темна"></button>
+          </div>
           <p id="model-info" class="muted"></p>
           <details class="sub">
             <summary>Свій скан (додатково)</summary>
@@ -93,9 +111,16 @@
 
         <details open class="panel">
           <summary>ШІ-генерація ескізу</summary>
-          <textarea id="prompt" rows="3" placeholder="Напр.: метелик із квітами півонії, тонкі лінії"></textarea>
+          <textarea id="prompt" rows="3" placeholder="Опишіть ідею: напр. ластівка з півоніями, тонкі лінії"></textarea>
+          <div id="prompt-chips" class="chips" aria-label="Швидкі мотиви"></div>
           <div class="row">
             <select id="style" aria-label="Стиль"></select>
+            <select id="variants" aria-label="Кількість варіантів" title="Кількість варіантів">
+              <option value="1">1 варіант</option><option value="2" selected>2 варіанти</option><option value="4">4 варіанти</option>
+            </select>
+          </div>
+          <div class="row">
+            <select id="provider" aria-label="Генератор" title="Генератор зображень"></select>
             <button id="generate" class="primary">Згенерувати</button>
           </div>
           <p id="gen-status" class="muted"></p>

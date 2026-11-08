@@ -169,3 +169,13 @@ textarea { width: 100%; resize: vertical; }
   position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none;
   color: var(--muted); font-size: 14px; background: rgba(17,18,22,0.4);
 }
+
+.chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 2px; }
+.chip { font-size: 12px; padding: 3px 8px; border-radius: 999px; background: transparent; }
+.chip:hover { border-color: var(--accent); color: var(--accent); }
+
+.skin-row { display: flex; align-items: center; gap: 6px; margin: 10px 0 0; }
+.skin-row .muted { margin: 0 4px 0 0; }
+.swatch { width: 26px; height: 26px; padding: 0; border-radius: 50%; border: 2px solid transparent; }
+.swatch.active { border-color: var(--accent); }
+.layer-actions { display: flex; gap: 6px; }

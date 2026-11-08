@@ -14,9 +14,11 @@ from PIL import Image, ImageDraw
 
 class MockProvider:
     name = "mock"
+    label = "Офлайн-орнамент (для розробки)"
+    free = True
 
-    async def generate(self, prompt: str, size: int, seed: int | None) -> bytes:
-        return render_ornament(prompt, size, seed)
+    async def generate(self, req) -> bytes:  # noqa: ANN001 - ImageRequest
+        return render_ornament(req.prompt, min(req.size, 1024), req.seed)
 
 
 def render_ornament(prompt: str, size: int = 1024, seed: int | None = None) -> bytes:

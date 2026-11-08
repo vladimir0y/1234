@@ -1,27 +1,50 @@
 """Prompt building for tattoo sketch generation."""
 from __future__ import annotations
 
-STYLES: dict[str, str] = {
-    "fine-line": "delicate fine line tattoo, single needle, thin precise black lines, minimal shading",
-    "blackwork": "bold blackwork tattoo, solid black fills, strong contrast, graphic shapes",
-    "traditional": "american traditional tattoo flash, bold outlines, limited palette, classic motifs",
-    "geometric": "geometric tattoo, sacred geometry, precise symmetric linework, dotwork accents",
-    "watercolor": "watercolor tattoo, soft color washes, paint splashes, loose sketchy outlines",
-    "minimal": "minimalist tattoo, very simple, few lines, lots of negative space",
-    "japanese": "japanese irezumi tattoo style, flowing composition, waves and wind bars",
-    "realism": "black and grey realism tattoo, smooth gradients, high detail",
-}
+import re
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class Style:
+    id: str
+    label: str
+    prompt: str
+    mode: str  # "ink" = black linework on transparent, "color" = keep colours
+
+
+STYLES_LIST = [
+    Style("fine-line", "Fine line", "delicate fine line tattoo, single needle, thin precise black lines, minimal shading", "ink"),
+    Style("blackwork", "Blackwork", "bold blackwork tattoo, solid black fills, strong contrast, graphic shapes", "ink"),
+    Style("minimal", "Мінімалізм", "minimalist tattoo, very simple, few clean lines, lots of negative space", "ink"),
+    Style("geometric", "Геометрія", "geometric tattoo, sacred geometry, precise symmetric linework", "ink"),
+    Style("dotwork", "Dotwork", "dotwork tattoo, stippling shading made of tiny dots, black ink", "ink"),
+    Style("ornamental", "Орнамент", "ornamental tattoo, mandala and filigree patterns, symmetric decorative linework", "ink"),
+    Style("lettering", "Леттеринг", "elegant script lettering tattoo, calligraphy, clean black ink", "ink"),
+    Style("tribal", "Трайбл", "tribal tattoo, flowing bold black shapes, polynesian inspired", "ink"),
+    Style("sketch", "Скетч", "sketch style tattoo, loose pencil-like lines, artistic hatching", "ink"),
+    Style("realism", "Реалізм ч/б", "black and grey realism tattoo, smooth gradients, high detail", "ink"),
+    Style("traditional", "Traditional", "american traditional tattoo flash, bold black outlines, limited flat colours", "color"),
+    Style("neo-traditional", "Neo-traditional", "neo traditional tattoo, bold outlines, rich colours, ornate details", "color"),
+    Style("japanese", "Японський", "japanese irezumi tattoo style, bold outlines, waves and wind bars", "color"),
+    Style("watercolor", "Акварель", "watercolor tattoo, soft colour washes, paint splashes, loose outlines", "color"),
+]
+STYLES = {s.id: s for s in STYLES_LIST}
 
 BASE = (
-    "tattoo design flash sheet, single isolated design centered, "
-    "clean white background, no skin, no body, no mockup, no text, no watermark, "
-    "high contrast, print-ready stencil quality"
+    "artwork only, single isolated design centered, plain pure white background, "
+    "flat 2D artwork, no skin, no body, no mockup, no frame, no watermark, high contrast, stencil-ready"
 )
+NEGATIVE = "photo, skin, arm, person, mockup, frame, border, text, watermark, signature, blurry, gradient background, 3d render"
 
 
 def build_prompt(user_prompt: str, style: str, shape_hint: str | None = None) -> str:
-    style_text = STYLES.get(style, STYLES["fine-line"])
-    parts = [user_prompt.strip(), style_text]
+    st = STYLES.get(style, STYLES["fine-line"])
+    # Start with "illustration on paper": the word "tattoo" alone makes many
+    # models draw a tattooed person instead of the design itself.
+    parts = [f"flash sheet illustration on white paper of {user_prompt.strip()}", st.prompt]
+    if st.mode == "ink":
+        parts.append("black ink only, no colour")
     if shape_hint:
         parts.append(f"composition fits a {shape_hint} area")
     parts.append(BASE)
@@ -41,3 +64,10 @@ def shape_hint_from_aspect(aspect: float | None) -> str | None:
     if aspect < 0.77:
         return "tall vertical"
     return "roughly square"
+
+
+_CYRILLIC = re.compile(r"[Ѐ-ӿ]")
+
+
+def needs_translation(text: str) -> bool:
+    return bool(_CYRILLIC.search(text))
