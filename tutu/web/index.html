@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#15161b" />
+    <title>Tutu — тату на твоєму 3D-тілі</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand"><span class="logo">tu<b>tu</b></span></div>
+      <input id="project-name" class="project-name" value="Новий проєкт" aria-label="Назва проєкту" />
+      <div class="actions">
+        <button id="undo" title="Скасувати (Ctrl+Z)" aria-label="Скасувати">↶</button>
+        <button id="redo" title="Повторити (Ctrl+Shift+Z)" aria-label="Повторити">↷</button>
+        <button id="save" class="primary">Зберегти</button>
+      </div>
+    </header>
+
+    <main class="workspace" data-tab="3d">
+      <section class="pane pane-3d">
+        <div class="toolbar">
+          <div class="seg" role="group" aria-label="Режим 3D">
+            <button data-mode="orbit" class="active" title="Обертати камеру">Огляд</button>
+            <button data-mode="add" title="Кисть: додати до ділянки">Виділити</button>
+            <button data-mode="erase" title="Кисть: прибрати з ділянки">Стерти</button>
+          </div>
+          <label class="slider">Кисть <input id="brush3d" type="range" min="3" max="80" value="20" /><output id="brush3d-out">2 см</output></label>
+          <button id="clear-selection" class="ghost">Очистити</button>
+          <label class="check"><input id="show-selection" type="checkbox" checked /> підсвітка</label>
+        </div>
+        <div id="viewport" class="viewport"></div>
+        <div id="hint3d" class="hint">Оберіть «Виділити» і проведіть по тілу там, де буде тату</div>
+      </section>
+
+      <section class="pane pane-2d">
+        <div class="toolbar">
+          <div class="seg" role="group" aria-label="Інструмент">
+            <button data-tool="move" class="active" title="Переміщення, масштаб, поворот шарів">Шари</button>
+            <button data-tool="brush" title="Пензель тушшю">Пензель</button>
+            <button data-tool="eraser" title="Гумка">Гумка</button>
+            <button data-tool="pan" title="Рухати полотно">Рука</button>
+          </div>
+          <label class="slider">Лінія <input id="brush2d" type="range" min="2" max="60" value="15" /><output id="brush2d-out">1.5 мм</output></label>
+          <input id="ink-color" type="color" value="#0b0b0d" title="Колір туші" />
+          <button id="fit" class="ghost" title="Вмістити">⤢</button>
+          <label class="check"><input id="show-heat" type="checkbox" /> спотворення</label>
+          <label class="check"><input id="show-wire" type="checkbox" checked /> сітка</label>
+        </div>
+        <div id="unwrap" class="viewport"></div>
+        <div id="region-info" class="hint">Розгортка ділянки — тут малюєте і розміщуєте ескіз</div>
+      </section>
+
+      <aside class="sidebar">
+        <details open class="panel">
+          <summary>Модель тіла</summary>
+          <div class="row">
+            <select id="demo-model" aria-label="Демо-модель"></select>
+          </div>
+          <label class="file-btn">Завантажити скан (OBJ, GLB, PLY, STL)
+            <input id="mesh-file" type="file" accept=".obj,.glb,.gltf,.ply,.stl" hidden />
+          </label>
+          <p id="model-info" class="muted"></p>
+        </details>
+
+        <details open class="panel">
+          <summary>ШІ-генерація ескізу</summary>
+          <textarea id="prompt" rows="3" placeholder="Напр.: метелик із квітами півонії, тонкі лінії"></textarea>
+          <div class="row">
+            <select id="style" aria-label="Стиль"></select>
+            <button id="generate" class="primary">Згенерувати</button>
+          </div>
+          <p id="gen-status" class="muted"></p>
+          <div id="gallery" class="gallery"></div>
+        </details>
+
+        <details open class="panel">
+          <summary>Шари</summary>
+          <div class="row">
+            <label class="file-btn small">+ Зображення<input id="image-file" type="file" accept="image/*" hidden /></label>
+            <button id="add-ink" class="ghost small">+ Шар туші</button>
+          </div>
+          <ul id="layers" class="layers"></ul>
+          <div id="layer-props" class="layer-props"></div>
+        </details>
+
+        <details open class="panel">
+          <summary>Експорт</summary>
+          <div class="row">
+            <select id="dpi" aria-label="DPI"><option value="300">300 DPI</option><option value="600">600 DPI</option></select>
+            <label class="check"><input id="outline" type="checkbox" checked /> контур ділянки</label>
+          </div>
+          <div class="row">
+            <button id="export-stencil" class="primary">Трафарет 1:1 (PNG)</button>
+            <button id="export-shot" class="ghost">Знімок 3D</button>
+          </div>
+          <p class="muted">Трафарет зберігається в реальному розмірі — друкуйте з масштабом 100%.</p>
+        </details>
+      </aside>
+    </main>
+
+    <nav class="tabs" aria-label="Розділи">
+      <button data-tab="3d" class="active">3D</button>
+      <button data-tab="2d">Розгортка</button>
+      <button data-tab="side">Панель</button>
+    </nav>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

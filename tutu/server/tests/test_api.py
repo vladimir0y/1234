@@ -1,0 +1,92 @@
+import io
+
+import pytest
+from fastapi.testclient import TestClient
+from PIL import Image
+
+from app.config import Settings
+from app.main import create_app
+from app.prompts import build_prompt, shape_hint_from_aspect
+
+
+@pytest.fixture()
+def client(tmp_path):
+    settings = Settings(data_dir=tmp_path, image_provider="mock", openai_api_key=None)
+    return TestClient(create_app(settings))
+
+
+def test_health(client):
+    r = client.get("/api/health")
+    assert r.status_code == 200
+    assert r.json()["image_provider"] == "mock"
+
+
+def test_generate_returns_transparent_png(client):
+    r = client.post("/api/generate", json={"prompt": "lotus flower", "style": "geometric", "size": 256})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert "geometric" in body["prompt"]
+    img = client.get(body["url"])
+    assert img.headers["content-type"] == "image/png"
+    im = Image.open(io.BytesIO(img.content))
+    assert im.size == (256, 256)
+    assert im.mode == "RGBA"
+    alpha = im.getchannel("A")
+    assert alpha.getextrema() == (0, 255)  # has both empty and inked pixels
+
+
+def test_generate_is_deterministic_with_seed(client):
+    a = client.post("/api/generate", json={"prompt": "moth", "size": 256, "seed": 7}).json()
+    b = client.post("/api/generate", json={"prompt": "moth", "size": 256, "seed": 7}).json()
+    assert client.get(a["url"]).content == client.get(b["url"]).content
+
+
+def test_generate_rejects_unknown_style(client):
+    r = client.post("/api/generate", json={"prompt": "moth", "style": "nope"})
+    assert r.status_code == 400
+
+
+def test_openai_without_key_is_400(client):
+    r = client.post("/api/generate", json={"prompt": "moth", "provider": "openai"})
+    assert r.status_code == 400
+
+
+def test_scan_upload_roundtrip(client):
+    obj = b"v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n"
+    r = client.post("/api/scans", files={"file": ("arm.obj", obj)}, data={"name": "Рука"})
+    assert r.status_code == 200, r.text
+    meta = r.json()
+    assert meta["format"] == "obj" and meta["name"] == "Рука"
+    assert client.get(f"/api/scans/{meta['id']}/mesh").content == obj
+    assert len(client.get("/api/scans").json()) == 1
+    assert client.delete(f"/api/scans/{meta['id']}").status_code == 200
+    assert client.get(f"/api/scans/{meta['id']}").status_code == 404
+
+
+def test_scan_rejects_bad_format(client):
+    r = client.post("/api/scans", files={"file": ("x.exe", b"MZ")})
+    assert r.status_code == 400
+
+
+def test_path_traversal_ids_are_404(client):
+    assert client.get("/api/scans/..%2F..%2Fetc").status_code == 404
+    assert client.get("/api/images/notanid").status_code == 404
+
+
+def test_project_crud(client):
+    p = client.post("/api/projects", json={"name": "Рукав", "state": {"faces": [1, 2, 3]}}).json()
+    assert p["state"]["faces"] == [1, 2, 3]
+    u = client.put(f"/api/projects/{p['id']}", json={"name": "Рукав v2", "state": {"faces": [4]}}).json()
+    assert u["name"] == "Рукав v2" and u["created_at"] == p["created_at"]
+    assert client.get("/api/projects").json()[0]["name"] == "Рукав v2"
+    assert client.delete(f"/api/projects/{p['id']}").status_code == 200
+    assert client.get(f"/api/projects/{p['id']}").status_code == 404
+
+
+def test_prompt_building():
+    assert shape_hint_from_aspect(3.0) == "long horizontal band"
+    assert shape_hint_from_aspect(1.0) == "roughly square"
+    assert shape_hint_from_aspect(None) is None
+    p = build_prompt("wolf", "blackwork", "tall vertical")
+    assert p.startswith("wolf, bold blackwork")
+    assert "tall vertical" in p and "white background" in p

@@ -1,0 +1,11 @@
+node_modules/
+web/dist/
+server/data/
+__pycache__/
+.pytest_cache/
+*.pyc
+.venv/
+.env
+ios/*.xcodeproj
+ios/Tutu/Resources/Info.plist
+.DS_Store
