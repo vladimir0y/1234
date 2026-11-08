@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { api, type BodyMeshData, type BodyPreset, type BodyPresetParams } from "./api";
 import { createBackend, STANDALONE, type Backend } from "./backend";
+import { isRest, POSE_PRESETS, Poser, REST_POSE, type PoseParams } from "./core/pose";
+import { panoramaUnwrap } from "./core/panorama";
 import { extensionOf, MESH_EXTENSIONS, parseMesh, prepareBody } from "./core/loaders";
 import { setPngDpi } from "./core/png";
 import { acceptedComponents, buildFaceAdjacency, connectedComponents, extractPatch, smoothSelection } from "./core/topology";
@@ -85,8 +87,9 @@ function unrle(runs: number[]): number[] {
 
 // ---------------------------------------------------------------------------
 // Model loading
-async function loadGeometry(geometry: THREE.BufferGeometry, label: string, opts: { keepCamera?: boolean } = {}) {
-  const prepared = prepareBody(geometry);
+async function loadGeometry(geometry: THREE.BufferGeometry, label: string, opts: { keepCamera?: boolean; weld?: boolean } = {}) {
+  const prepared = prepareBody(geometry, { weld: opts.weld });
+  poser = null;
   landmarks = null;
   viewer.setBody(prepared, opts.keepCamera);
   brush3d.value = String(Math.round(viewer.brushRadius * 1000));
@@ -99,6 +102,7 @@ async function loadGeometry(geometry: THREE.BufferGeometry, label: string, opts:
   $("#model-info").textContent =
     `${label}: ${(s.x * 100).toFixed(0)}×${(s.y * 100).toFixed(0)}×${(s.z * 100).toFixed(0)} см, ` +
     `${faces.toLocaleString("uk")} трикутників` + (prepared.unit !== "m" ? ` (одиниці файлу: ${prepared.unit})` : "");
+  return prepared;
 }
 
 // --- Realistic base bodies, generated on the server from anthropometric morphs
@@ -154,8 +158,18 @@ async function loadBody(presetId: string, overrides: Partial<BodyPresetParams> =
     const params = bodyParams(model)!;
     const kg = meshVolume(mesh.positions, mesh.indices);
     const sex = params.sex >= 0.5 ? "Чоловіче" : "Жіноче";
-    await loadGeometry(g, `${sex} · ${preset.label}`, { keepCamera: keepSelection.length > 0 });
+    const prepared = await loadGeometry(g, `${sex} · ${preset.label}`, { keepCamera: keepSelection.length > 0, weld: false });
     landmarks = mesh.landmarks;
+    if (mesh.skin) {
+      // Bone pivots in editor coordinates (same transform prepareBody applied).
+      const bones = mesh.skin.bones.map((b) => ({
+        ...b,
+        head: b.head.map((x, i) => x * prepared.scale + prepared.offset.getComponent(i)) as [number, number, number],
+      }));
+      poser = new Poser({ ...mesh.skin, bones });
+    }
+    $("#pose-panel").hidden = !poser;
+    applyPose();
     $("#model-info").textContent = `${sex} · ${preset.label}: ${Math.round(params.height_cm)} см, ≈${Math.round(kg)} кг`;
     if (keepSelection.length) {
       viewer.setSelection(keepSelection);
@@ -210,9 +224,13 @@ function setInfo(text: string, warn = false) {
   info.classList.toggle("warn", warn);
 }
 
+let unwrapRun = 0;
 async function unwrapSelection() {
   const mesh = viewer.mesh;
   if (!mesh || !adjacency) return;
+  const run = ++unwrapRun; // a newer call (or canvas switch) makes this one stale
+  pending?.reject(new Error("cancelled"));
+  pending = null;
   if (viewer.selection.size < 2) {
     editor.setGeometry(null);
     viewer.clearPatch();
@@ -221,15 +239,23 @@ async function unwrapSelection() {
     return;
   }
   const comps = connectedComponents(adjacency, viewer.selection).filter((c) => c.length >= 2);
-  const patches = comps.map((faces) => extractPatch(mesh, faces));
+  const panorama = canvasMode === "panorama";
+  // Panorama: one canvas for everything selected (back, sides, front, legs).
+  const patches = panorama ? [extractPatch(mesh, comps.flat())] : comps.map((faces) => extractPatch(mesh, faces));
   setInfo("Розгортаю…");
   let result: CombinedUnwrap;
   try {
-    result = await runUnwrap(patches.map((p) => ({ positions: p.positions, triangles: p.triangles })));
+    if (panorama) {
+      const axis = landmarks?.["spine-2"] ?? [0, 0, 0];
+      result = panoramaUnwrap(patches[0].positions, patches[0].triangles, { center: [axis[0], axis[2]], seam: "auto" });
+    } else {
+      result = await runUnwrap(patches.map((p) => ({ positions: p.positions, triangles: p.triangles })));
+    }
   } catch (err) {
     if ((err as Error).message !== "cancelled") setInfo((err as Error).message, true);
     return;
   }
+  if (run !== unwrapRun) return;
   const flat = patches.flatMap((p) => p.vertices);
   patchVertices = Array.from(result.source, (i) => flat[i]); // cut seams duplicate vertices
   editor.setGeometry({ uv: result.uv, triangles: result.triangles, areaRatio: result.areaRatio });
@@ -242,6 +268,11 @@ async function unwrapSelection() {
 
   const { width, height } = editor.size;
   const quality = result.meanDistortion < 0.05 ? "відмінна" : result.meanDistortion < 0.15 ? "добра" : "помітні спотворення";
+  if (panorama) {
+    setInfo(`Панорама навколо тіла: ${(width * 100).toFixed(0)} × ${(height * 100).toFixed(0)} см · шов там, де ділянка найвужча`);
+    markDirty();
+    return;
+  }
   setInfo(
     `${(width * 100).toFixed(1)} × ${(height * 100).toFixed(1)} см · розгортка: ${quality}` +
       (comps.length > 1 ? ` · ${comps.length} ділянки` : "") +
@@ -439,7 +470,8 @@ function renderLayerProps(l: Layer | null) {
     const img = l as ImageLayer;
     const actions = document.createElement("div");
     actions.className = "layer-actions";
-    actions.innerHTML = `<button class="small" data-a="flip" title="Дзеркально">⇋ Дзеркало</button><button class="small" data-a="dup" title="Копія шару">⧉ Копія</button>`;
+    actions.innerHTML = `<button class="small" data-a="fit" title="Розтягнути на всю ділянку">⤧ Вписати в межі</button><button class="small" data-a="flip" title="Дзеркально">⇋ Дзеркало</button><button class="small" data-a="dup" title="Копія шару">⧉ Копія</button>`;
+    actions.querySelector('[data-a="fit"]')!.addEventListener("click", () => editor.fitLayerToRegion(img));
     actions.querySelector('[data-a="flip"]')!.addEventListener("click", () => editor.updateLayer(img, { flipX: !img.flipX }));
     actions.querySelector('[data-a="dup"]')!.addEventListener("click", () => editor.duplicateLayer(img.id));
     box.appendChild(actions);
@@ -510,10 +542,91 @@ function addToGallery(img: HTMLImageElement, title: string) {
   thumb.appendChild(img.cloneNode());
   thumb.addEventListener("click", () => {
     if (!editor.geometry) return toast("Спершу виділіть ділянку на тілі", true);
-    editor.addImageLayer(img, title.slice(0, 40));
+    const layer = editor.addImageLayer(img, title.slice(0, 40));
+    if ($<HTMLInputElement>("#fit-region").checked) editor.fitLayerToRegion(layer, false);
   });
   $("#gallery").prepend(thumb);
 }
+
+// --- Canvas mode, region shape and style references for generators
+let canvasMode: "unwrap" | "panorama" = "unwrap";
+$<HTMLSelectElement>("#canvas-mode").addEventListener("change", (e) => {
+  canvasMode = (e.target as HTMLSelectElement).value as typeof canvasMode;
+  unwrapSelection();
+});
+
+function shapeForGenerator(fit: boolean) {
+  if (!fit || !editor.geometry) return {};
+  const { width, height } = editor.regionCanvas(1024);
+  return { width, height, outline: editor.regionOutline(1024) };
+}
+
+const references: Array<{ blob: Blob; url: string }> = [];
+async function shrinkImage(file: File, max = 1024): Promise<Blob> {
+  const bmp = await createImageBitmap(file);
+  const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(bmp.width * k);
+  c.height = Math.round(bmp.height * k);
+  c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
+  return new Promise((res) => c.toBlob((b) => res(b!), "image/jpeg", 0.85));
+}
+function renderRefs() {
+  const box = $("#refs");
+  box.innerHTML = "";
+  references.forEach((r, i) => {
+    const b = document.createElement("button");
+    b.title = "Прибрати референс";
+    b.innerHTML = `<img src="${r.url}" alt="Референс ${i + 1}">`;
+    b.addEventListener("click", () => {
+      URL.revokeObjectURL(r.url);
+      references.splice(i, 1);
+      renderRefs();
+    });
+    box.appendChild(b);
+  });
+}
+$<HTMLInputElement>("#ref-file").addEventListener("change", async (e) => {
+  const input = e.target as HTMLInputElement;
+  for (const f of Array.from(input.files ?? []).slice(0, 4 - references.length)) {
+    const blob = await shrinkImage(f);
+    references.push({ blob, url: URL.createObjectURL(blob) });
+  }
+  input.value = "";
+  renderRefs();
+});
+
+$("#ext-prompt").addEventListener("click", async () => {
+  const prompt = $<HTMLTextAreaElement>("#prompt").value.trim();
+  if (prompt.length < 2) return toast("Опишіть ідею", true);
+  const btn = $<HTMLButtonElement>("#ext-prompt");
+  btn.disabled = true;
+  btn.textContent = "Claude пише промпт…";
+  try {
+    const text = await backend.externalPrompt!({
+      prompt, style: styleSelect.value, variants: 1, ...shapeForGenerator(true), references: references.map((r) => r.blob),
+    });
+    const out = $<HTMLTextAreaElement>("#ext-prompt-out");
+    out.value = text;
+    out.hidden = false;
+    $("#ext-actions").hidden = false;
+  } catch (err) {
+    toast((err as Error).message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Промпт для FLUX / Midjourney";
+  }
+});
+$("#ext-copy").addEventListener("click", () => {
+  const out = $<HTMLTextAreaElement>("#ext-prompt-out");
+  navigator.clipboard.writeText(out.value).then(
+    () => toast("Промпт скопійовано"),
+    () => {
+      out.select();
+      toast("Виділено — скопіюйте вручну");
+    },
+  );
+});
 
 $("#generate").addEventListener("click", async () => {
   const prompt = $<HTMLTextAreaElement>("#prompt").value.trim();
@@ -523,6 +636,7 @@ $("#generate").addEventListener("click", async () => {
   const status = $("#gen-status");
   status.textContent = "Ставлю в чергу…";
   const added = new Set<string>();
+  const fit = $<HTMLInputElement>("#fit-region").checked && !!editor.geometry;
   let first = true;
   const take = async (images: { image_id: string; url: string }[]) => {
     for (const im of images) {
@@ -531,7 +645,10 @@ $("#generate").addEventListener("click", async () => {
       const img = await loadImage(api.url(im.url));
       addToGallery(img, prompt);
       // The first variant goes straight onto the body; the rest wait in the gallery.
-      if (first && editor.geometry) editor.addImageLayer(img, prompt.slice(0, 40));
+      if (first && editor.geometry) {
+        const layer = editor.addImageLayer(img, prompt.slice(0, 40));
+        if (fit) editor.fitLayerToRegion(layer, false);
+      }
       first = false;
     }
   };
@@ -544,6 +661,8 @@ $("#generate").addEventListener("click", async () => {
         variants: Number($<HTMLSelectElement>("#variants").value),
         region_aspect: editor.geometry ? width / height : undefined,
         provider: providerSelect.value || undefined,
+        ...shapeForGenerator(fit),
+        references: references.map((r) => r.blob),
       },
       (j) => {
         status.textContent = j.message;
@@ -794,6 +913,54 @@ $("#new-project").addEventListener("click", async () => {
 });
 
 // ---------------------------------------------------------------------------
+// Pose
+let poser: Poser | null = null;
+let pose: PoseParams = { ...REST_POSE };
+let poseFrame = 0;
+function applyPose() {
+  cancelAnimationFrame(poseFrame);
+  poseFrame = requestAnimationFrame(() => {
+    if (!viewer.mesh) return;
+    let posed: Float32Array | null = null;
+    if (poser && !isRest(pose)) {
+      posed = poser.apply(viewer.mesh.positions, pose);
+      // Keep the lowest point on the floor (sitting, bending).
+      let minY = Infinity;
+      for (let i = 1; i < posed.length; i += 3) minY = Math.min(minY, posed[i]);
+      for (let i = 1; i < posed.length; i += 3) posed[i] -= minY;
+    }
+    viewer.setPosed(posed);
+  });
+}
+function syncPoseUI() {
+  $$<HTMLInputElement>("[data-pose]").forEach((inp) => {
+    const k = inp.dataset.pose as keyof PoseParams;
+    inp.value = String(pose[k] as number);
+    inp.nextElementSibling!.textContent = `${pose[k]}°`;
+  });
+}
+const poseSelect = $<HTMLSelectElement>("#pose-preset");
+for (const [id, p] of Object.entries(POSE_PRESETS)) poseSelect.add(new Option(p.label, id));
+poseSelect.addEventListener("change", () => {
+  pose = { ...REST_POSE, ...POSE_PRESETS[poseSelect.value].pose };
+  syncPoseUI();
+  applyPose();
+});
+$("#pose-reset").addEventListener("click", () => {
+  pose = { ...REST_POSE };
+  poseSelect.value = "rest";
+  syncPoseUI();
+  applyPose();
+});
+$$<HTMLInputElement>("[data-pose]").forEach((inp) =>
+  inp.addEventListener("input", () => {
+    (pose as unknown as Record<string, number>)[inp.dataset.pose!] = Number(inp.value);
+    inp.nextElementSibling!.textContent = `${inp.value}°`;
+    applyPose();
+  }),
+);
+
+// ---------------------------------------------------------------------------
 // Mobile tabs
 $$<HTMLButtonElement>(".tabs button").forEach((b) =>
   b.addEventListener("click", () => {
@@ -819,6 +986,7 @@ $$<HTMLButtonElement>(".tabs button").forEach((b) =>
 async function boot() {
   backend = await createBackend();
   document.body.classList.toggle("standalone", STANDALONE);
+  $("#ext-box").hidden = !backend.externalPrompt;
   renderLayers();
   const params = new URLSearchParams(location.search);
   try {

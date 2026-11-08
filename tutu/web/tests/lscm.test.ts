@@ -185,3 +185,25 @@ describe("ring cutting", () => {
     expect(boundaryLoops(cut.triangles, cut.source.length)).toHaveLength(1);
   });
 });
+
+describe("panorama", () => {
+  it("unrolls a full ring around the body into one strip of the real circumference", async () => {
+    const { panoramaUnwrap } = await import("../src/core/panorama");
+    const R = 0.15, H = 0.3, N = 64;
+    const positions: number[] = [];
+    const tris: number[] = [];
+    for (let j = 0; j <= 5; j++) for (let i = 0; i < N; i++) {
+      const a = (2 * Math.PI * i) / N;
+      positions.push(R * Math.sin(a), (H * j) / 5, R * Math.cos(a));
+    }
+    const id = (i: number, j: number) => j * N + (i % N);
+    for (let j = 0; j < 5; j++) for (let i = 0; i < N; i++)
+      tris.push(id(i, j), id(i + 1, j), id(i + 1, j + 1), id(i, j), id(i + 1, j + 1), id(i, j + 1));
+    const r = panoramaUnwrap(positions, tris, { center: [0, 0], seam: "auto" });
+    let minU = Infinity, maxU = -Infinity;
+    for (let i = 0; i < r.uv.length; i += 2) { minU = Math.min(minU, r.uv[i]); maxU = Math.max(maxU, r.uv[i]); }
+    expect(maxU - minU).toBeCloseTo(2 * Math.PI * R, 2);
+    expect(r.cuts).toBe(1);
+    for (let t = 0; t < r.triangles.length / 3; t++) expect(r.areaRatio[t]).toBeGreaterThan(0.9);
+  });
+});

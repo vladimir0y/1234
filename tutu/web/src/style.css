@@ -182,3 +182,11 @@ textarea { width: 100%; resize: vertical; }
 
 #projects { max-width: 180px; }
 @media (max-width: 760px) { #projects { max-width: 110px; } }
+
+.pose-sliders .slider-wide output { min-width: 44px; }
+
+.refs { display: flex; gap: 6px; flex-wrap: wrap; }
+.refs button { width: 56px; height: 56px; padding: 0; overflow: hidden; }
+.refs img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ext-box { display: grid; gap: 6px; margin: 4px 0 8px; }
+.ext-box textarea { font-size: 12px; }

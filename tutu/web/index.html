@@ -55,6 +55,10 @@
           <label class="slider">Лінія <input id="brush2d" type="range" min="2" max="60" value="15" /><output id="brush2d-out">1.5 мм</output></label>
           <input id="ink-color" type="color" value="#0b0b0d" title="Колір туші" />
           <button id="fit" class="ghost" title="Вмістити">⤢</button>
+          <select id="canvas-mode" aria-label="Полотно" title="Як розгортати ділянку">
+            <option value="unwrap">Полотно: розгортка (точна)</option>
+            <option value="panorama">Полотно: панорама навколо тіла</option>
+          </select>
           <label class="check"><input id="show-heat" type="checkbox" /> спотворення</label>
           <label class="check"><input id="show-wire" type="checkbox" checked /> сітка</label>
           <label class="check" title="Як тату виглядатиме після загоєння"><input id="healed" type="checkbox" /> загоєне</label>
@@ -111,10 +115,36 @@
           </details>
         </details>
 
+        <details class="panel" id="pose-panel">
+          <summary>Поза</summary>
+          <p class="muted">Тату тримається на шкірі: змініть позу, щоб побачити, як малюнок поводиться в русі.</p>
+          <div class="row">
+            <select id="pose-preset" aria-label="Готова поза"></select>
+            <button id="pose-reset" class="ghost small">Скинути</button>
+          </div>
+          <div class="pose-sliders">
+            <label class="slider slider-wide">Руки вгору <input data-pose="armsUp" type="range" min="-20" max="170" value="0" /><output>0°</output></label>
+            <label class="slider slider-wide">Руки вперед <input data-pose="armsForward" type="range" min="-40" max="120" value="0" /><output>0°</output></label>
+            <label class="slider slider-wide">Лікті <input data-pose="elbows" type="range" min="0" max="140" value="0" /><output>0°</output></label>
+            <label class="slider slider-wide">Поворот тулуба <input data-pose="twist" type="range" min="-60" max="60" value="0" /><output>0°</output></label>
+            <label class="slider slider-wide">Нахил уперед <input data-pose="bend" type="range" min="-20" max="70" value="0" /><output>0°</output></label>
+            <label class="slider slider-wide">Нахил убік <input data-pose="sideBend" type="range" min="-30" max="30" value="0" /><output>0°</output></label>
+            <label class="slider slider-wide">Голова <input data-pose="head" type="range" min="-70" max="70" value="0" /><output>0°</output></label>
+            <label class="slider slider-wide">Стегна вперед <input data-pose="hips" type="range" min="-20" max="100" value="0" /><output>0°</output></label>
+            <label class="slider slider-wide">Коліна <input data-pose="knees" type="range" min="0" max="120" value="0" /><output>0°</output></label>
+            <label class="slider slider-wide">Крок <input data-pose="step" type="range" min="0" max="40" value="0" /><output>0°</output></label>
+          </div>
+        </details>
+
         <details open class="panel">
           <summary>ШІ-генерація ескізу</summary>
           <textarea id="prompt" rows="3" placeholder="Опишіть ідею: напр. ластівка з півоніями, тонкі лінії"></textarea>
           <div id="prompt-chips" class="chips" aria-label="Швидкі мотиви"></div>
+          <div class="row">
+            <label class="file-btn small">+ Референси стилю<input id="ref-file" type="file" accept="image/*" multiple hidden /></label>
+            <label class="check" title="Композиція заповнює форму виділеної ділянки"><input id="fit-region" type="checkbox" checked /> заповнити межі ділянки</label>
+          </div>
+          <div id="refs" class="refs"></div>
           <div class="row">
             <select id="style" aria-label="Стиль"></select>
             <select id="variants" aria-label="Кількість варіантів" title="Кількість варіантів">
@@ -126,6 +156,14 @@
             <button id="generate" class="primary">Згенерувати</button>
           </div>
           <p id="gen-status" class="muted"></p>
+          <div id="ext-box" class="ext-box" hidden>
+            <button id="ext-prompt" class="ghost small" title="Claude напише промпт під ваші межі й референси">Промпт для FLUX / Midjourney</button>
+            <textarea id="ext-prompt-out" rows="5" readonly hidden></textarea>
+            <div class="row" id="ext-actions" hidden>
+              <button id="ext-copy" class="small">Копіювати</button>
+              <span class="muted">Згенеруйте там, потім «+ Зображення» у шарах і «Вписати в межі».</span>
+            </div>
+          </div>
           <div id="gallery" class="gallery"></div>
         </details>
 

@@ -14,6 +14,8 @@ class Style:
 
 
 STYLES_LIST = [
+    Style("art", "Художнє зображення", "beautiful original artwork illustration, rich composition, not a generic tattoo flash, no banners", "color"),
+    Style("art-bw", "Художнє, чорно-біле", "beautiful original black and grey artwork illustration, confident linework, not a generic tattoo flash", "ink"),
     Style("fine-line", "Fine line", "delicate fine line tattoo, single needle, thin precise black lines, minimal shading", "ink"),
     Style("blackwork", "Blackwork", "bold blackwork tattoo, solid black fills, strong contrast, graphic shapes", "ink"),
     Style("minimal", "Мінімалізм", "minimalist tattoo, very simple, few clean lines, lots of negative space", "ink"),

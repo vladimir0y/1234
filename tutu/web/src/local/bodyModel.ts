@@ -4,7 +4,7 @@
  * exact height, joint landmarks, one Catmull–Clark subdivision.
  * Keep the maths identical to the Python version (tests compare them).
  */
-import type { BodyMeshData, BodyPreset, BodyPresetParams } from "../api";
+import type { Bone, BodyMeshData, BodyPreset, BodyPresetParams } from "../api";
 
 export const BODY_PRESETS: BodyPreset[] = [
   { id: "m-slim", label: "Худорлявий", description: "низька вага, вузька кістка", params: { sex: 1, height_cm: 180, weight: 0.15, muscle: 0.45 } },
@@ -26,6 +26,7 @@ interface Header {
   quadsOffset: number;
   joints: Record<string, [number, number]>;
   targets: Record<string, [number, number, number, number]>; // idsOffset, deltaOffset, count, scale
+  bones: Array<{ name: string; parent: number; joint: string; ids: number; w: number; count: number }>;
 }
 
 export class LocalBodyModel {
@@ -34,6 +35,9 @@ export class LocalBodyModel {
   private bodyIds: Uint32Array;
   private joints: Record<string, Uint32Array> = {};
   private targets = new Map<string, { ids: Uint16Array; delta: Int16Array; scale: number }>();
+  private bones: Header["bones"] = [];
+  /** Dense skin weights for body vertices: n x bones, rows sum to 1. */
+  private weights: Float32Array = new Float32Array(0);
 
   constructor(buf: ArrayBuffer) {
     const view = new DataView(buf);
@@ -55,6 +59,23 @@ export class LocalBodyModel {
     for (let v = 0; v < h.vertices; v++) if (used[v]) (remap[v] = ids.length), ids.push(v);
     this.bodyIds = Uint32Array.from(ids);
     this.quads = Uint32Array.from(rawQuads, (v) => remap[v]);
+    this.bones = h.bones ?? [];
+    const B = this.bones.length;
+    const w = new Float32Array(ids.length * B);
+    this.bones.forEach((b, bi) => {
+      const vids = new Uint16Array(buf, data + b.ids, b.count);
+      const ws = new Float32Array(buf, data + b.w, b.count);
+      for (let i = 0; i < b.count; i++) {
+        const v = remap[vids[i]];
+        if (v >= 0) w[v * B + bi] += ws[i];
+      }
+    });
+    for (let v = 0; v < ids.length; v++) {
+      let s = 0;
+      for (let b = 0; b < B; b++) s += w[v * B + b];
+      if (s > 1e-6) for (let b = 0; b < B; b++) w[v * B + b] /= s;
+    }
+    this.weights = w;
   }
 
   static async load(url: string): Promise<LocalBodyModel> {
@@ -138,6 +159,7 @@ export class LocalBodyModel {
     }
     const sub = catmullClark(pos, this.quads);
     pos = sub.positions;
+    const skin = this.bones.length ? this.skin(sub, n, landmarks) : undefined;
     const q = sub.quads;
     const nq = q.length / 4;
     const indices = new Uint32Array(nq * 6);
@@ -149,7 +171,57 @@ export class LocalBodyModel {
       indices[3 * (nq + i) + 1] = q[4 * i + 2];
       indices[3 * (nq + i) + 2] = q[4 * i + 3];
     }
-    return { positions: Float32Array.from(pos), indices, landmarks };
+    return { positions: Float32Array.from(pos), indices, landmarks, skin };
+  }
+
+  /** Subdivide the skin weights like the mesh and keep 4 bones per vertex. */
+  private skin(sub: ReturnType<typeof catmullClark>, n: number, landmarks: Record<string, [number, number, number]>) {
+    const B = this.bones.length;
+    const w = this.weights;
+    const { e0, e1 } = sub;
+    const ne = e0.length;
+    const nf = this.quads.length / 4;
+    const total = n + ne + nf;
+    const index = new Uint8Array(total * 4);
+    const weight = new Uint8Array(total * 4);
+    const row = new Float32Array(B);
+    for (let v = 0; v < total; v++) {
+      row.fill(0);
+      if (v < n) for (let b = 0; b < B; b++) row[b] = w[v * B + b];
+      else if (v < n + ne) {
+        const a = e0[v - n], c = e1[v - n];
+        for (let b = 0; b < B; b++) row[b] = (w[a * B + b] + w[c * B + b]) / 2;
+      } else {
+        const f = v - n - ne;
+        for (let k = 0; k < 4; k++) {
+          const q = this.quads[4 * f + k];
+          for (let b = 0; b < B; b++) row[b] += w[q * B + b] / 4;
+        }
+      }
+      // top 4
+      const best = [-1, -1, -1, -1];
+      for (let b = 0; b < B; b++) {
+        for (let k = 0; k < 4; k++) {
+          if (best[k] < 0 || row[b] > row[best[k]]) {
+            best.splice(k, 0, b);
+            best.length = 4;
+            break;
+          }
+        }
+      }
+      let s = 0;
+      for (const b of best) s += b >= 0 ? row[b] : 0;
+      let sum = 0;
+      const q = best.map((b) => (b >= 0 && s > 0 ? Math.floor((row[b] / s) * 255) : 0));
+      q.forEach((x) => (sum += x));
+      q[0] += 255 - sum;
+      for (let k = 0; k < 4; k++) {
+        index[4 * v + k] = Math.max(0, best[k]);
+        weight[4 * v + k] = q[k];
+      }
+    }
+    const bones: Bone[] = this.bones.map((b) => ({ name: b.name, parent: b.parent, head: landmarks[b.joint] }));
+    return { bones, index, weight };
   }
 }
 
@@ -168,7 +240,7 @@ function clampParams(p: BodyPresetParams) {
 }
 
 /** One Catmull–Clark level on an all-quad mesh (same rules as the Python version). */
-export function catmullClark(v: Float64Array, quads: Uint32Array): { positions: Float64Array; quads: Uint32Array } {
+export function catmullClark(v: Float64Array, quads: Uint32Array): { positions: Float64Array; quads: Uint32Array; e0: number[]; e1: number[] } {
   const nv = v.length / 3;
   const nf = quads.length / 4;
   const fp = new Float64Array(nf * 3);
@@ -264,5 +336,5 @@ export function catmullClark(v: Float64Array, quads: Uint32Array): { positions: 
       nq[o + 2] = nv + ne + f;
       nq[o + 3] = nv + edgeOf[4 * f + ((i + 3) % 4)];
     }
-  return { positions: out, quads: nq };
+  return { positions: out, quads: nq, e0, e1 };
 }

@@ -15,7 +15,10 @@ export function capability<T>(name: string): Promise<T | null> {
 }
 
 export interface SampleFn {
-  (input: string, opts?: { modelTier?: "quick" | "default" | "complex"; cache?: boolean; onText?: (e: { text: string }) => void }): Promise<{ text: string; truncated: boolean }>;
+  (
+    input: string,
+    opts?: { modelTier?: "quick" | "default" | "complex"; cache?: boolean; images?: Blob[]; onText?: (e: { text: string }) => void },
+  ): Promise<{ text: string; truncated: boolean }>;
 }
 
 export interface Downloads {

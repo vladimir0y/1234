@@ -5,6 +5,8 @@
 import { capability, type SampleFn } from "./claude";
 
 export const LOCAL_STYLES = [
+  { id: "art", label: "Художнє зображення", mode: "color" as const, hint: "a beautiful original artwork/illustration that can be tattooed. NOT a generic tattoo-flash cliché: no banners, no stock tattoo motifs unless asked. Rich composition, confident linework, considered shading" },
+  { id: "art-bw", label: "Художнє, чорно-біле", mode: "ink" as const, hint: "a beautiful original black-and-grey artwork/illustration that can be tattooed, NOT a generic tattoo-flash cliché; confident linework, shading by hatching or dot density" },
   { id: "fine-line", label: "Fine line", mode: "ink" as const, hint: "delicate fine line, single thin stroke weight (stroke-width 2-3), no fills" },
   { id: "blackwork", label: "Blackwork", mode: "ink" as const, hint: "bold blackwork: large solid black fills and thick strokes, strong negative space" },
   { id: "minimal", label: "Мінімалізм", mode: "ink" as const, hint: "minimalist: very few clean lines, lots of empty space" },
@@ -17,21 +19,58 @@ export const LOCAL_STYLES = [
   { id: "watercolor", label: "Акварель", mode: "color" as const, hint: "watercolor: thin black sketch lines with soft semi-transparent colour blobs (fill-opacity 0.3-0.6)" },
 ];
 
-const svgPrompt = (prompt: string, style: (typeof LOCAL_STYLES)[number], aspect: number | undefined, variant: number, total: number) => {
-  const w = 1024;
-  const h = aspect && isFinite(aspect) ? Math.round(Math.max(0.35, Math.min(2.8, 1 / aspect)) * 1024) : 1024;
-  return [
-    "You are a professional tattoo artist. Draw ONE tattoo design as a standalone SVG.",
-    `Subject (may be in Ukrainian): ${prompt}`,
+export interface SketchOptions {
+  prompt: string;
+  style: string;
+  variants: number;
+  /** Canvas size in SVG units; matches the region's proportions. */
+  width: number;
+  height: number;
+  /** Region outline as an SVG path in the same units: the composition fills it. */
+  outline?: string;
+  /** Style references from the user. */
+  references?: Blob[];
+}
+
+const svgPrompt = (o: SketchOptions, style: (typeof LOCAL_STYLES)[number], variant: number) =>
+  [
+    "You are an illustrator designing artwork that will be tattooed on a real person. Draw ONE design as a standalone SVG.",
+    `What to draw (the user's words, may be Ukrainian): ${o.prompt}`,
     `Style: ${style.hint}.`,
-    style.mode === "ink" ? "Use only black (#111) strokes and fills. No colour, no grey background." : "Use bold black outlines plus the style's colours.",
-    `Canvas: viewBox="0 0 ${w} ${h}". Fill most of the canvas, keep 40px margin. Transparent background: no background rect.`,
-    "Make it detailed and beautiful (40-200 elements), recognisable, balanced, printable as a stencil.",
+    o.references?.length
+      ? "Attached are the user's style references: match their visual language (line quality, shading, motifs, mood) but create an original design."
+      : "",
+    style.mode === "ink" ? "Use only black (#111) and greys made by hatching or dots. No colour." : "Colours are allowed when they serve the image.",
+    `Canvas: viewBox="0 0 ${o.width} ${o.height}". Transparent background: no background rect.`,
+    o.outline
+      ? `The tattoo area on the body is this shape (an SVG path in the same coordinates; it may be a band around the body unrolled flat):\n<path d="${o.outline}"/>\nCompose the artwork to fill THIS shape: main elements inside it, flowing along its form, nothing important outside it. Do not draw the outline itself.`
+      : "Fill most of the canvas, keep a small margin.",
+    "Make it detailed and beautiful (60-300 elements), balanced, readable at real size.",
     "Allowed elements: svg, g, path, circle, ellipse, line, polyline, polygon, rect. No text, no style tags, no images, no gradients, no filters, no scripts.",
-    total > 1 ? `This is variant ${variant + 1} of ${total}: choose a clearly different composition from the other variants.` : "",
+    o.variants > 1 ? `This is variant ${variant + 1} of ${o.variants}: choose a clearly different composition.` : "",
     "Answer with the SVG code only, starting with <svg and ending with </svg>.",
   ].filter(Boolean).join("\n");
-};
+
+/** A text-to-image prompt for FLUX / Midjourney etc., written by Claude. */
+export async function externalPrompt(o: SketchOptions): Promise<string> {
+  const sample = await capability<SampleFn>("sample");
+  if (!sample) throw new Error("Доступно, коли сторінку відкрито в claude.ai");
+  const style = LOCAL_STYLES.find((s) => s.id === o.style) ?? LOCAL_STYLES[0];
+  const ratio = `${Math.round((o.width / o.height) * 10) / 10}:1`;
+  const { text } = await sample(
+    [
+      "Write ONE English prompt for an image generator (FLUX / Midjourney) for artwork that will later be tattooed.",
+      `Idea (may be Ukrainian): ${o.prompt}`,
+      `Style: ${style.hint}.`,
+      o.references?.length ? "Describe the visual style of the attached reference images precisely and include it." : "",
+      `Aspect ratio of the area: ${ratio} (width:height). The artwork must fill that shape edge to edge.`,
+      "Plain white background, the artwork only (no body, no skin, no mockup, no frame, no text).",
+      "Answer with the prompt only, one paragraph, then on a new line: --ar W:H with whole numbers.",
+    ].filter(Boolean).join("\n"),
+    { modelTier: "default", cache: false, images: o.references?.length ? o.references : undefined },
+  );
+  return text.trim();
+}
 
 const ALLOWED = new Set(["svg", "g", "path", "circle", "ellipse", "line", "polyline", "polygon", "rect"]);
 
@@ -77,22 +116,19 @@ export async function svgToPng(svg: string, maxSide = 1400): Promise<string> {
 }
 
 export async function sketchWithClaude(
-  prompt: string,
-  styleId: string,
-  variants: number,
-  aspect: number | undefined,
+  o: SketchOptions,
   onImage: (dataUrl: string, i: number) => void,
   onStatus: (msg: string) => void,
 ): Promise<string[]> {
   const sample = await capability<SampleFn>("sample");
   if (!sample) throw new Error("Генерація через Claude доступна, коли сторінку відкрито в claude.ai");
-  const style = LOCAL_STYLES.find((s) => s.id === styleId) ?? LOCAL_STYLES[0];
-  onStatus("Claude малює ескіз… (зазвичай 20–60 с)");
+  const style = LOCAL_STYLES.find((s) => s.id === o.style) ?? LOCAL_STYLES[0];
+  onStatus("Claude малює… (зазвичай 30–90 с)");
   const errors: string[] = [];
   const results = await Promise.all(
-    Array.from({ length: variants }, async (_, i) => {
+    Array.from({ length: o.variants }, async (_, i) => {
       try {
-        const { text } = await sample(svgPrompt(prompt, style, aspect, i, variants), { modelTier: "default", cache: false });
+        const { text } = await sample(svgPrompt(o, style, i), { modelTier: "default", cache: false, images: o.references?.length ? o.references : undefined });
         const png = await svgToPng(sanitizeSvg(text));
         onImage(png, i);
         return png;

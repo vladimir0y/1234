@@ -31,3 +31,22 @@ describe.skipIf(!existsSync(BIN))("browser body model matches the server", () =>
     console.log("browser body build", Math.round(ms), "ms");
   });
 });
+
+describe.skipIf(!existsSync(BIN))("browser skin matches the server", () => {
+  it("has the same strongest bones and weights", () => {
+    const buf = readFileSync(BIN);
+    const model = new LocalBodyModel(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+    const m = model.build({ sex: 0, height_cm: 158, weight: 0.7, muscle: 0.5, breast: 0.85, glutes: 0.6 });
+    expect(m.skin).toBeDefined();
+    expect(m.skin!.bones[8].name).toBe(REF.bone8.name);
+    for (let c = 0; c < 3; c++) expect(Math.abs(m.skin!.bones[8].head[c] - REF.bone8.head[c])).toBeLessThan(2e-4);
+    for (const [v, [idx, w]] of Object.entries(REF.skin) as [string, [number[], number[]]][]) {
+      const i = Number(v);
+      for (let k = 0; k < 4; k++) {
+        if (w[k] < 3) continue; // ties among zero weights may order differently
+        expect(m.skin!.index[4 * i + k]).toBe(idx[k]);
+        expect(Math.abs(m.skin!.weight[4 * i + k] - w[k])).toBeLessThanOrEqual(2);
+      }
+    }
+  });
+});

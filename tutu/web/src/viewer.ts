@@ -102,6 +102,41 @@ export class Viewer {
   }
 
   private bodySize = new THREE.Vector3(1, 1, 1);
+  /** Positions/normals as shown (posed); `mesh` keeps the rest pose for unwrapping. */
+  private current: Float32Array | null = null;
+  private currentNormals: Float32Array | null = null;
+  private brushCentroids: Float32Array | null = null;
+  private normalsGeom: THREE.BufferGeometry | null = null;
+  private patchArgs: [number[], Uint32Array, Float32Array, THREE.Texture] | null = null;
+
+  /** Show the body in a pose (null = rest). Topology and the design stay the same. */
+  setPosed(posed: Float32Array | null) {
+    if (!this.mesh || !this.body || !this.normalsGeom) return;
+    const pos = (posed ?? this.mesh.positions) as Float32Array;
+    const idx = this.mesh.indices;
+    const ng = this.normalsGeom;
+    (ng.getAttribute("position").array as Float32Array).set(pos);
+    ng.getAttribute("position").needsUpdate = true;
+    ng.computeVertexNormals();
+    const nrm = ng.getAttribute("normal").array as Float32Array;
+    this.current = pos;
+    this.currentNormals = posed ? nrm : this.normals;
+    const g = this.body.geometry;
+    const dp = g.getAttribute("position").array as Float32Array;
+    const dn = g.getAttribute("normal").array as Float32Array;
+    for (let i = 0; i < idx.length; i++) {
+      const v = 3 * idx[i];
+      dp[3 * i] = pos[v]; dp[3 * i + 1] = pos[v + 1]; dp[3 * i + 2] = pos[v + 2];
+      dn[3 * i] = nrm[v]; dn[3 * i + 1] = nrm[v + 1]; dn[3 * i + 2] = nrm[v + 2];
+    }
+    g.getAttribute("position").needsUpdate = true;
+    g.getAttribute("normal").needsUpdate = true;
+    g.computeBoundingSphere();
+    g.computeBoundingBox();
+    g.boundsTree?.refit();
+    this.brushCentroids = posed ? faceCentroids({ positions: pos, indices: idx }) : this.centroids;
+    if (this.patchArgs) this.setPatch(...this.patchArgs);
+  }
 
   setBody(prepared: PreparedBody, keepCamera = false) {
     if (this.body) {
@@ -119,6 +154,13 @@ export class Viewer {
     this.normals = merged.getAttribute("normal").array as Float32Array;
     this.adjacency = buildFaceAdjacency(this.mesh);
     this.centroids = faceCentroids(this.mesh);
+    // Posed copies (start equal to the rest pose).
+    this.current = positions;
+    this.currentNormals = this.normals;
+    this.brushCentroids = this.centroids;
+    this.normalsGeom = new THREE.BufferGeometry();
+    this.normalsGeom.setAttribute("position", new THREE.BufferAttribute(positions.slice(), 3));
+    this.normalsGeom.setIndex(new THREE.BufferAttribute(index, 1));
 
     // Display copy: one vertex per face corner, so faces can be coloured individually.
     const display = merged.toNonIndexed();
@@ -174,7 +216,8 @@ export class Viewer {
     if (!this.body) return;
     const attr = this.body.geometry.getAttribute("color") as THREE.BufferAttribute;
     const arr = attr.array as Float32Array;
-    const tint = this.skin.clone().lerp(HIGHLIGHT, 0.5);
+    // Fainter once a design is on the region, so the tattoo stays readable.
+    const tint = this.skin.clone().lerp(HIGHLIGHT, this.patch ? 0.18 : 0.5);
     const faces = arr.length / 9;
     for (let f = 0; f < faces; f++) {
       const c = this.showSelection && this.selection.has(f) ? tint : this.skin;
@@ -189,13 +232,16 @@ export class Viewer {
 
   /** Overlay mesh for the region, textured with the tattoo canvas. */
   setPatch(globalVertices: number[], triangles: Uint32Array, uv: Float32Array, texture: THREE.Texture) {
-    this.clearPatch();
-    if (!this.mesh || !this.normals) return;
+    this.clearPatch(false);
+    if (!this.mesh || !this.current || !this.currentNormals) return;
+    this.patchArgs = [globalVertices, triangles, uv, texture];
+    const P = this.current;
+    const N = this.currentNormals;
     const n = globalVertices.length;
     const pos = new Float32Array(n * 3);
     const offset = 0.0006; // 0.6 mm above the skin, avoids z-fighting
     globalVertices.forEach((g, i) => {
-      for (let c = 0; c < 3; c++) pos[3 * i + c] = this.mesh!.positions[3 * g + c] + this.normals![3 * g + c] * offset;
+      for (let c = 0; c < 3; c++) pos[3 * i + c] = P[3 * g + c] + N[3 * g + c] * offset;
     });
     const geom = new THREE.BufferGeometry();
     geom.setAttribute("position", new THREE.BufferAttribute(pos, 3));
@@ -215,9 +261,11 @@ export class Viewer {
     this.patch = new THREE.Mesh(geom, mat);
     this.patch.renderOrder = 2;
     this.scene.add(this.patch);
+    this.refreshColors();
   }
 
-  clearPatch() {
+  clearPatch(forget = true) {
+    if (forget) this.patchArgs = null;
     if (!this.patch) return;
     this.scene.remove(this.patch);
     this.patch.geometry.dispose();
@@ -281,10 +329,10 @@ export class Viewer {
   }
 
   private paint(hit: THREE.Intersection) {
-    if (hit.faceIndex == null || !this.adjacency || !this.centroids) return;
+    if (hit.faceIndex == null || !this.adjacency || !this.brushCentroids) return;
     const faces = facesInBrush(
       this.adjacency,
-      this.centroids,
+      this.brushCentroids,
       hit.faceIndex,
       [hit.point.x, hit.point.y, hit.point.z],
       this.brushRadius,

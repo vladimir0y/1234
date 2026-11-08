@@ -855,6 +855,65 @@ export class UnwrapEditor {
     return c;
   }
 
+  // --- region shape for generators --------------------------------------------
+  /** Canvas size (SVG units) with the region's proportions, longest side `long`. */
+  regionCanvas(long = 1024): { width: number; height: number } {
+    const { width, height } = this.size;
+    const k = long / Math.max(width, height, 1e-6);
+    return { width: Math.max(64, Math.round(width * k)), height: Math.max(64, Math.round(height * k)) };
+  }
+
+  /** Region outline as an SVG path in regionCanvas() coordinates (y down), simplified. */
+  regionOutline(long = 1024, maxPoints = 260): string {
+    if (!this.geometry) return "";
+    const { uv, triangles } = this.geometry;
+    const { width } = this.regionCanvas(long);
+    const k = width / Math.max(this.size.width, 1e-6);
+    const X = (i: number) => Math.round((uv[2 * i] - this.bounds.minU) * k);
+    const Y = (i: number) => Math.round((this.bounds.maxV - uv[2 * i + 1]) * k);
+    const next = new Map<number, number[]>();
+    for (const [a, b] of boundaryEdges(triangles)) {
+      (next.get(a) ?? next.set(a, []).get(a)!).push(b);
+      (next.get(b) ?? next.set(b, []).get(b)!).push(a);
+    }
+    const seen = new Set<number>();
+    const loops: number[][] = [];
+    for (const start of next.keys()) {
+      if (seen.has(start)) continue;
+      const loop = [start];
+      seen.add(start);
+      let cur = start;
+      for (;;) {
+        const nb = (next.get(cur) ?? []).find((v) => !seen.has(v));
+        if (nb === undefined) break;
+        seen.add(nb);
+        loop.push(nb);
+        cur = nb;
+      }
+      if (loop.length > 2) loops.push(loop);
+    }
+    const total = loops.reduce((s, l) => s + l.length, 0);
+    const step = Math.max(1, Math.ceil(total / maxPoints));
+    return loops
+      .map((l) => {
+        const pts = l.filter((_, i) => i % step === 0);
+        return "M" + pts.map((v) => `${X(v)} ${Y(v)}`).join(" L") + " Z";
+      })
+      .join(" ");
+  }
+
+  /** Stretch a layer to cover the region's bounding box (keeping proportions). */
+  fitLayerToRegion(layer: ImageLayer, record = true) {
+    if (record) this.pushHistory();
+    const { width, height } = this.size;
+    const aspect = layer.rendered.height / layer.rendered.width;
+    layer.rotation = 0;
+    layer.x = (this.bounds.minU + this.bounds.maxU) / 2;
+    layer.y = (this.bounds.minV + this.bounds.maxV) / 2;
+    layer.width = Math.min(width, height / aspect);
+    this.changed();
+  }
+
   // --- persistence -------------------------------------------------------------
   serialize() {
     return this.layers.map((l) =>

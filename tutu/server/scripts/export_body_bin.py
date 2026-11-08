@@ -39,6 +39,12 @@ def main() -> None:
     for name in data["joint_names"]:
         ids = data[f"joint:{name}"].astype("<u4")
         header["joints"][str(name)] = [add(ids), int(len(ids))]
+    header["bones"] = []
+    for i, name in enumerate(data["bone_names"]):
+        ids = data[f"w:{name}:i"].astype("<u2")
+        w = data[f"w:{name}:w"].astype("<f4")
+        header["bones"].append({"name": str(name), "parent": int(data["bone_parent"][i]),
+                                "joint": str(data["bone_joint"][i]), "ids": add(ids), "w": add(w), "count": int(len(ids))})
     for key in data.files:
         if not (key.startswith("t:") and key.endswith(":i")):
             continue

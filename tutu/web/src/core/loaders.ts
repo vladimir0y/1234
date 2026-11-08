@@ -54,13 +54,16 @@ export interface PreparedBody {
   unit: "m" | "cm" | "mm";
   /** Size of the bounding box in metres. */
   size: THREE.Vector3;
+  /** File coordinates -> editor coordinates: p * scale + offset. */
+  scale: number;
+  offset: THREE.Vector3;
 }
 
 /**
  * Weld vertices, convert to metres, and place the model on the floor centred.
  * Scans from iPhone are in metres; files from DCC tools are often cm or mm.
  */
-export function prepareBody(raw: THREE.BufferGeometry): PreparedBody {
+export function prepareBody(raw: THREE.BufferGeometry, opts: { weld?: boolean } = {}): PreparedBody {
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", raw.getAttribute("position").clone());
   if (raw.index) g.setIndex(raw.index.clone());
@@ -77,11 +80,13 @@ export function prepareBody(raw: THREE.BufferGeometry): PreparedBody {
   g.computeBoundingBox();
   const bb = g.boundingBox!;
   const center = bb.getCenter(new THREE.Vector3());
-  g.translate(-center.x, -bb.min.y, -center.z);
+  const offset = new THREE.Vector3(-center.x, -bb.min.y, -center.z);
+  g.translate(offset.x, offset.y, offset.z);
 
-  // 0.1 mm weld: also joins seams between chunks of a LiDAR scan.
-  const merged = mergeVertices(g, 1e-4);
+  // 0.1 mm weld: also joins seams between chunks of a LiDAR scan. Base bodies are
+  // already welded, and keeping their vertex order keeps skin weights aligned.
+  const merged = opts.weld === false && g.index ? g : mergeVertices(g, 1e-4);
   merged.computeVertexNormals();
   merged.computeBoundingBox();
-  return { merged, unit, size: merged.boundingBox!.getSize(new THREE.Vector3()) };
+  return { merged, unit, size: merged.boundingBox!.getSize(new THREE.Vector3()), scale, offset };
 }

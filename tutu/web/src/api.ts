@@ -118,10 +118,24 @@ export interface BodyPreset {
   params: BodyPresetParams;
 }
 
+export interface Bone {
+  name: string;
+  parent: number;
+  head: [number, number, number];
+}
+
+/** Skeleton + 4 bone influences per vertex (weights are bytes summing to 255). */
+export interface BodySkin {
+  bones: Bone[];
+  index: Uint8Array;
+  weight: Uint8Array;
+}
+
 export interface BodyMeshData {
   positions: Float32Array;
   indices: Uint32Array;
   landmarks: Record<string, [number, number, number]>;
+  skin?: BodySkin;
 }
 
 /** Parse the server's TUTB body format: header JSON + float32 xyz + uint32 triangles. */
@@ -137,7 +151,11 @@ export function parseBodyMesh(buf: ArrayBuffer): BodyMeshData {
   off += 8;
   const positions = new Float32Array(buf.slice(off, off + nv * 12));
   const indices = new Uint32Array(buf.slice(off + nv * 12, off + nv * 12 + nt * 12));
-  return { positions, indices, landmarks: header.landmarks };
+  off += nv * 12 + nt * 12;
+  const skin = header.skin
+    ? { bones: header.bones as Bone[], index: new Uint8Array(buf.slice(off, off + nv * 4)), weight: new Uint8Array(buf.slice(off + nv * 4, off + nv * 8)) }
+    : undefined;
+  return { positions, indices, landmarks: header.landmarks, skin };
 }
 
 export const bodyApi = {

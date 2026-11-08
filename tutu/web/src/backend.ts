@@ -23,6 +23,11 @@ export interface GenerateBody {
   variants: number;
   region_aspect?: number;
   provider?: string;
+  /** Canvas in SVG units with the region's proportions, and its outline path. */
+  width?: number;
+  height?: number;
+  outline?: string;
+  references?: Blob[];
 }
 export interface SavedProject<S> {
   id: string;
@@ -42,6 +47,8 @@ export interface Backend {
   listProjects(): Promise<Array<{ id: string; name: string; updated: number }>>;
   loadSavedMesh(ref: string): Promise<{ data: ArrayBuffer; name: string }>;
   download(blob: Blob, filename: string): Promise<void>;
+  /** Claude writes a prompt for an external image generator (browser build only). */
+  externalPrompt?(body: GenerateBody): Promise<string>;
 }
 
 // ---------------------------------------------------------------------------
@@ -92,7 +99,7 @@ const serverBackend: Backend = {
 
 // ---------------------------------------------------------------------------
 async function createLocalBackend(): Promise<Backend> {
-  const [{ LocalBodyModel, BODY_PRESETS }, { LOCAL_STYLES, sketchWithClaude }, { store }, { capability }] = await Promise.all([
+  const [{ LocalBodyModel, BODY_PRESETS }, { LOCAL_STYLES, sketchWithClaude, externalPrompt }, { store }, { capability }] = await Promise.all([
     import("./local/bodyModel"),
     import("./local/sketch"),
     import("./local/store"),
@@ -115,10 +122,7 @@ async function createLocalBackend(): Promise<Backend> {
       const job: GenerationJob = { id: `local-${Date.now()}`, status: "running", message: "", images: [], errors: [], prompt: body.prompt };
       try {
         await sketchWithClaude(
-          body.prompt,
-          body.style,
-          body.variants,
-          body.region_aspect,
+          { prompt: body.prompt, style: body.style, variants: body.variants, width: body.width ?? 1024, height: body.height ?? 1024, outline: body.outline, references: body.references },
           (png, i) => {
             job.images.push({ image_id: `${job.id}-${i}`, url: png, provider: "claude", seed: i });
             onProgress({ ...job, images: [...job.images] });
@@ -134,6 +138,8 @@ async function createLocalBackend(): Promise<Backend> {
       }
       return job;
     },
+    externalPrompt: (body) =>
+      externalPrompt({ prompt: body.prompt, style: body.style, variants: 1, width: body.width ?? 1024, height: body.height ?? 1024, references: body.references }),
     async saveProject(id, body) {
       const pid = id ?? `p${Date.now().toString(36)}`;
       let meshRef: string | undefined;

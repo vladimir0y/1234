@@ -19,13 +19,45 @@ import numpy as np
 
 UNIT = 0.1  # MakeHuman units are decimetres
 JOINTS = [
-    "neck", "head", "pelvis", "spine-1", "spine-2", "spine-3",
+    "neck", "head", "pelvis", "spine-1", "spine-2", "spine-3", "spine-4",
     "l-clavicle", "r-clavicle", "l-shoulder", "r-shoulder", "l-elbow", "r-elbow", "l-hand", "r-hand",
     "l-upper-leg", "r-upper-leg", "l-knee", "r-knee", "l-ankle", "r-ankle",
 ]
 MUSCLE = ["minmuscle", "averagemuscle", "maxmuscle"]
 WEIGHT = ["minweight", "averageweight", "maxweight"]
 SEXES = ["female", "male"]
+
+# Skeleton for posing (MakeHuman "game_engine" rig, CC0): bone -> (parent, joint cube at its head).
+BONES = {
+    "pelvis": (None, "pelvis"),
+    "spine_01": ("pelvis", "spine-4"),
+    "spine_02": ("spine_01", "spine-3"),
+    "spine_03": ("spine_02", "spine-2"),
+    "neck_01": ("spine_03", "neck"),
+    "head": ("neck_01", "head"),
+}
+for side in "lr":
+    BONES.update({
+        f"clavicle_{side}": ("spine_03", f"{side}-clavicle"),
+        f"upperarm_{side}": (f"clavicle_{side}", f"{side}-shoulder"),
+        f"lowerarm_{side}": (f"upperarm_{side}", f"{side}-elbow"),
+        f"hand_{side}": (f"lowerarm_{side}", f"{side}-hand"),
+        f"thigh_{side}": ("pelvis", f"{side}-upper-leg"),
+        f"calf_{side}": (f"thigh_{side}", f"{side}-knee"),
+        f"foot_{side}": (f"calf_{side}", f"{side}-ankle"),
+    })
+
+
+def merged_bone(name: str) -> str:
+    """Fold fingers into the hand, toes into the foot, Root into the pelvis."""
+    if name == "Root":
+        return "pelvis"
+    side = name[-1]
+    if name.startswith(("thumb", "index", "middle", "ring", "pinky")):
+        return f"hand_{side}"
+    if name.startswith("ball"):
+        return f"foot_{side}"
+    return name
 
 
 def target_names() -> list[str]:
@@ -93,6 +125,23 @@ def main(data_dir: str) -> None:
     }
     for j, ids in joint_vertex_sets.items():
         out[f"joint:{j}"] = remap[ids].astype(np.int32)
+
+    # Skin weights, folded onto the posing bones.
+    bone_names = list(BONES)
+    weights = __import__("json").loads((root / "rigs" / "standard" / "weights.game_engine.json").read_text())["weights"]
+    acc: dict[str, dict[int, float]] = {b: {} for b in bone_names}
+    for src, pairs in weights.items():
+        b = merged_bone(src)
+        for vid, w in pairs:
+            if remap[vid] >= 0:
+                acc[b][int(remap[vid])] = acc[b].get(int(remap[vid]), 0.0) + float(w)
+    out["bone_names"] = np.array(bone_names)
+    out["bone_parent"] = np.array([bone_names.index(BONES[b][0]) if BONES[b][0] else -1 for b in bone_names], dtype=np.int32)
+    out["bone_joint"] = np.array([BONES[b][1] for b in bone_names])
+    for b in bone_names:
+        ids = np.array(sorted(acc[b]), dtype=np.uint16)
+        out[f"w:{b}:i"] = ids
+        out[f"w:{b}:w"] = np.array([acc[b][i] for i in ids.tolist()], dtype=np.float16)
 
     names = target_names()
     for name in names:

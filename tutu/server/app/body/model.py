@@ -53,6 +53,13 @@ class BodyModel:
         quads = data["quads"].astype(np.int64)
         self.joint_names = [str(n) for n in data["joint_names"]]
         self.joints = {n: data[f"joint:{n}"].astype(np.int64) for n in self.joint_names}
+        # Skeleton for posing.
+        self.bone_names = [str(n) for n in data["bone_names"]]
+        self.bone_parent = data["bone_parent"].astype(int).tolist()
+        self.bone_joint = [str(n) for n in data["bone_joint"]]
+        weights = np.zeros((len(self.base), len(self.bone_names)), dtype=np.float32)
+        for b, name in enumerate(self.bone_names):
+            weights[data[f"w:{name}:i"].astype(np.int64), b] = data[f"w:{name}:w"].astype(np.float32)
         self.targets: dict[str, tuple[np.ndarray, np.ndarray]] = {}
         for key in data.files:
             if key.startswith("t:") and key.endswith(":i"):
@@ -64,6 +71,8 @@ class BodyModel:
         remap[body_ids] = np.arange(len(body_ids))
         self.body_ids = body_ids
         self.quads = remap[quads]
+        w = weights[body_ids]
+        self.weights = w / np.maximum(w.sum(axis=1, keepdims=True), 1e-6)
 
     # --- morphing ---------------------------------------------------------
     def _add(self, out: np.ndarray, name: str, w: float) -> None:
@@ -121,11 +130,21 @@ class BodyModel:
         scale = (p.height_cm / 100) / (hi[1] - lo[1])
         positions = (positions + offset) * scale
         landmarks = {n: ((x + offset) * scale).tolist() for n, x in landmarks.items()}
+        bones = [
+            {"name": n, "parent": self.bone_parent[i], "head": landmarks[self.bone_joint[i]]}
+            for i, n in enumerate(self.bone_names)
+        ]
         quads = self.quads
+        weights = self.weights
         for _ in range(subdivisions):
+            # Skin weights follow the subdivision: edge points average their ends,
+            # face points their four corners.
+            e0, e1 = _edges(quads, len(positions))
+            weights = np.concatenate([weights, (weights[e0] + weights[e1]) / 2, weights[quads].mean(axis=1)])
             positions, quads = catmull_clark(positions, quads)
         tris = np.concatenate([quads[:, [0, 1, 2]], quads[:, [0, 2, 3]]])
-        return BodyMesh(positions.astype(np.float32), tris.astype(np.uint32), landmarks, p)
+        idx, w = _top4(weights)
+        return BodyMesh(positions.astype(np.float32), tris.astype(np.uint32), landmarks, p, bones, idx, w)
 
 
 @dataclass
@@ -134,19 +153,45 @@ class BodyMesh:
     triangles: np.ndarray
     landmarks: dict[str, list[float]]
     params: BodyParams
+    bones: list[dict] | None = None
+    bone_index: np.ndarray | None = None  # (n, 4) uint8
+    bone_weight: np.ndarray | None = None  # (n, 4) uint8, sums to 255
 
     def to_bytes(self) -> bytes:
         """TUTB format: magic, version, json header, then raw float32 xyz and uint32 triangles."""
-        header = json.dumps({"landmarks": self.landmarks, "params": asdict(self.params)}).encode()
+        skin = self.bones is not None
+        header = json.dumps({"landmarks": self.landmarks, "params": asdict(self.params),
+                             "bones": self.bones, "skin": skin}).encode()
         header += b" " * (-len(header) % 4)
         buf = io.BytesIO()
         buf.write(b"TUTB")
-        buf.write(struct.pack("<III", 1, len(header), 0))
+        buf.write(struct.pack("<III", 2, len(header), 0))
         buf.write(header)
         buf.write(struct.pack("<II", len(self.positions), len(self.triangles)))
         buf.write(self.positions.astype("<f4").tobytes())
         buf.write(self.triangles.astype("<u4").tobytes())
+        if skin:
+            buf.write(self.bone_index.astype(np.uint8).tobytes())
+            buf.write(self.bone_weight.astype(np.uint8).tobytes())
         return buf.getvalue()
+
+
+def _edges(quads: np.ndarray, nv: int) -> tuple[np.ndarray, np.ndarray]:
+    """Unique undirected edges in the same order catmull_clark creates edge points."""
+    a = quads.ravel()
+    b = np.roll(quads, -1, axis=1).ravel()
+    uniq = np.unique(np.minimum(a, b) * nv + np.maximum(a, b))
+    return uniq // nv, uniq % nv
+
+
+def _top4(weights: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Four strongest bones per vertex, weights quantised to bytes summing to 255."""
+    idx = np.argsort(-weights, axis=1)[:, :4]
+    w = np.take_along_axis(weights, idx, axis=1)
+    w = w / np.maximum(w.sum(axis=1, keepdims=True), 1e-6)
+    q = np.floor(w * 255).astype(np.int32)
+    q[:, 0] += 255 - q.sum(axis=1)
+    return idx.astype(np.uint8), q.astype(np.uint8)
 
 
 def catmull_clark(v: np.ndarray, quads: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
