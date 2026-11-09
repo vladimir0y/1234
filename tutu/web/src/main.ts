@@ -960,7 +960,8 @@ async function openState(state: ProjectState, name: string) {
 
 /** Ready-made example projects shipped next to the page (browser build). */
 const EXAMPLES = [
-  { id: "dragon", name: "Дракон + портрет: одна композиція на все тіло" },
+  { id: "dragon-color", name: "Дракон у кольорі + портрет (генерація однією композицією)" },
+  { id: "dragon", name: "Дракон ч/б + портрет (зібраний з частин)" },
   { id: "sketch", name: "Ескіз з референсів: змія + портрет" },
 ];
 async function openExample(id: string) {
