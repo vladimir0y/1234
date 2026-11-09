@@ -20,3 +20,7 @@ services:
         sync: false
       - key: CLOUDFLARE_API_TOKEN
         sync: false
+      # Your own computer as a generator: Render makes a random token, copy it into
+      # tutu/worker/run_worker.bat on the computer (see tutu/docs/LOCAL_GPU.md).
+      - key: TUTU_WORKER_TOKEN
+        generateValue: true

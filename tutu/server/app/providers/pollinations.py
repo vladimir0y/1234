@@ -17,6 +17,7 @@ class PollinationsProvider:
     name = "pollinations"
     label = "Pollinations (FLUX)"
     free = True
+    img2img = False
 
     def __init__(self, key: str | None, transport: httpx.AsyncBaseTransport | None = None,
                  max_wait: float = 60) -> None:

@@ -20,6 +20,7 @@ class CloudflareProvider:
     name = "cloudflare"
     label = "FLUX.1 schnell (Cloudflare)"
     free = True
+    img2img = False
 
     def __init__(self, account_id: str, token: str, transport: httpx.AsyncBaseTransport | None = None) -> None:
         self.account_id = account_id

@@ -1,13 +1,15 @@
 """Tutu backend API."""
 from __future__ import annotations
 
+import base64
+import binascii
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -19,6 +21,7 @@ from .jobs import JobRunner
 from .prompts import NEGATIVE, STYLES, STYLES_LIST, build_prompt, needs_translation, shape_hint_from_aspect
 from .providers import build_provider, provider_chain
 from .providers.cloudflare import CloudflareProvider
+from .providers.worker import HUB
 from .storage import NotFound, Storage
 
 MEDIA_TYPES = {
@@ -39,6 +42,14 @@ class GenerateRequest(BaseModel):
     variants: int = Field(default=2, ge=1, le=4)
     region_aspect: float | None = Field(default=None, gt=0, le=50)
     provider: str | None = None
+    width: int | None = Field(default=None, ge=256, le=2048)
+    height: int | None = Field(default=None, ge=256, le=2048)
+    # img2img: a guide image (base64 PNG/JPEG/WEBP) that keeps the composition's layout,
+    # and how far the result may move away from it (0 = same, 1 = ignore the guide).
+    init_image: str | None = Field(default=None, max_length=12_000_000)
+    denoise: float = Field(default=0.6, ge=0.05, le=1.0)
+    # Use the prompt as is (no tattoo-flash wrapping) - for full compositions.
+    raw_prompt: bool = False
 
 
 class ProjectBody(BaseModel):
@@ -121,7 +132,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(400, f"Unknown style '{req.style}'")
         if req.provider and build_provider(req.provider, settings) is None:
             raise HTTPException(400, f"Provider '{req.provider}' is not configured")
-        chain = provider_chain(settings, req.provider)
+        init = None
+        if req.init_image:
+            try:
+                init = base64.b64decode(req.init_image.split(",", 1)[-1], validate=True)
+            except (binascii.Error, ValueError) as e:
+                raise HTTPException(400, "init_image is not base64") from e
+        chain = provider_chain(settings, req.provider, img2img=init is not None)
+        if not chain:
+            raise HTTPException(400, "No generator can follow a guide image right now")
         translator = build_provider("cloudflare", settings)
 
         async def prepare(text: str) -> str:
@@ -134,9 +153,36 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     return text
             return text
 
-        prompt = build_prompt(req.prompt, req.style, shape_hint_from_aspect(req.region_aspect))
-        job = jobs.submit(chain, prompt, NEGATIVE, style.mode, req.variants, req.seed, req.size, prepare)
+        prompt = req.prompt if req.raw_prompt else build_prompt(req.prompt, req.style, shape_hint_from_aspect(req.region_aspect))
+        extra = {"width": req.width, "height": req.height, "init_image": init, "denoise": req.denoise}
+        job = jobs.submit(chain, prompt, NEGATIVE, style.mode, req.variants, req.seed, req.size, prepare, extra)
         return job.public()
+
+    # --- your own computer as a generator ------------------------------------
+    def worker_auth(token: str | None) -> None:
+        if not settings.worker_token or token != settings.worker_token:
+            raise HTTPException(401, "Bad worker token")
+
+    @app.get("/api/worker/next")
+    async def worker_next(wait: float = 25, model: str | None = None,
+                          x_tutu_worker: str | None = Header(default=None)) -> Response:
+        """Long poll for the computer's worker: 200 with a task, or 204 when there is none."""
+        worker_auth(x_tutu_worker)
+        task = await HUB.next(min(max(wait, 0), 30), {"model": model} if model else None)
+        if not task:
+            return Response(status_code=204)
+        return JSONResponse({"id": task.id, **task.payload})
+
+    @app.post("/api/worker/result/{task_id}")
+    async def worker_result(task_id: str, request: Request, error: str | None = None,
+                            x_tutu_worker: str | None = Header(default=None)) -> dict[str, bool]:
+        worker_auth(x_tutu_worker)
+        body = await request.body()
+        return {"accepted": HUB.finish(task_id, body or None, error)}
+
+    @app.get("/api/worker/status")
+    def worker_status() -> dict[str, Any]:
+        return {"configured": bool(settings.worker_token), "online": HUB.online(), **HUB.info}
 
     @app.get("/api/jobs/{job_id}")
     def job_status(job_id: str) -> dict[str, Any]:

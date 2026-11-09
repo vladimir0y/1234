@@ -17,10 +17,22 @@ ANON = "0000000000"
 MODELS = ["AlbedoBase XL 3.1", "Juggernaut XL", "stable_diffusion"]
 
 
+def _webp_b64(data: bytes, w: int, h: int) -> str:
+    from io import BytesIO
+
+    from PIL import Image
+
+    img = Image.open(BytesIO(data)).convert("RGB").resize((w, h))
+    out = BytesIO()
+    img.save(out, "WEBP", quality=92)
+    return base64.b64encode(out.getvalue()).decode()
+
+
 class HordeProvider:
     name = "horde"
     label = "AI Horde (SDXL)"
     free = True
+    img2img = True
 
     def __init__(self, key: str | None, transport: httpx.AsyncBaseTransport | None = None,
                  poll_seconds: float = 5, timeout_seconds: float = 900) -> None:
@@ -31,13 +43,21 @@ class HordeProvider:
 
     async def generate(self, req: ImageRequest) -> bytes:
         headers = {"apikey": self.key, "Client-Agent": "tutu:0.2:https://github.com/vladimir0y/1234"}
-        size = 1024 if self.key != ANON else 768
+        w, h = req.dims
+        if self.key == ANON and w * h > 832 * 1088:  # anonymous requests have a size cap
+            k = (832 * 1088 / (w * h)) ** 0.5
+            w, h = max(256, int(w * k) // 64 * 64), max(256, int(h * k) // 64 * 64)
+        params = {"width": w, "height": h, "steps": 28, "cfg_scale": 6,
+                  "sampler_name": "k_euler_a", "seed": str(req.seed), "n": 1, "karras": True}
         payload = {
             "prompt": f"{req.prompt} ### {req.negative}" if req.negative else req.prompt,
-            "params": {"width": size, "height": size, "steps": 25, "cfg_scale": 6,
-                       "sampler_name": "k_euler_a", "seed": str(req.seed), "n": 1},
-            "models": MODELS, "r2": False, "nsfw": False, "censor_nsfw": True,
+            "params": params,
+            "models": MODELS, "r2": False, "nsfw": False, "censor_nsfw": False,
         }
+        if req.init_image:
+            payload["source_image"] = _webp_b64(req.init_image, w, h)
+            payload["source_processing"] = "img2img"
+            params["denoising_strength"] = req.denoise
         async with httpx.AsyncClient(timeout=60, transport=self.transport) as client:
             r = await client.post(f"{API}/generate/async", headers=headers, json=payload)
             if r.status_code >= 400:
@@ -60,6 +80,6 @@ class HordeProvider:
                 await client.delete(f"{API}/generate/status/{job}")  # free the queue slot
                 raise
         gens = status.get("generations") or []
-        if not gens or gens[0].get("censored"):
+        if not gens or gens[0].get("censored"):  # false positives happen on skin tones
             raise ProviderError("AI Horde: немає результату")
         return base64.b64decode(gens[0]["img"])

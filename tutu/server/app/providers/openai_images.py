@@ -11,6 +11,7 @@ class OpenAIProvider:
     name = "openai"
     label = "OpenAI gpt-image (платний)"
     free = False
+    img2img = False
 
     def __init__(self, api_key: str, model: str, transport: httpx.AsyncBaseTransport | None = None) -> None:
         self.api_key = api_key

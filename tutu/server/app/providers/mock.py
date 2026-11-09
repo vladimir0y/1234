@@ -16,6 +16,7 @@ class MockProvider:
     name = "mock"
     label = "Офлайн-орнамент (для розробки)"
     free = True
+    img2img = True
 
     async def generate(self, req) -> bytes:  # noqa: ANN001 - ImageRequest
         return render_ornament(req.prompt, min(req.size, 1024), req.seed)

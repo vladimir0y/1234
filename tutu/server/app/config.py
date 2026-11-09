@@ -35,6 +35,9 @@ class Settings:
     horde_api_key: str | None = field(default_factory=lambda: _env("AI_HORDE_API_KEY"))
     horde_enabled: bool = field(default_factory=lambda: os.getenv("TUTU_HORDE", "") == "1")
 
+    # Your own computer as a generator: the worker script authenticates with this token.
+    worker_token: str | None = field(default_factory=lambda: _env("TUTU_WORKER_TOKEN"))
+
     max_scan_mb: int = field(default_factory=lambda: int(os.getenv("TUTU_MAX_SCAN_MB", "200")))
     cors_origins: list[str] = field(
         default_factory=lambda: os.getenv("TUTU_CORS_ORIGINS", "*").split(",")

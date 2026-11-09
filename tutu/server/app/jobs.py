@@ -59,16 +59,17 @@ class JobRunner:
         seed: int | None,
         size: int,
         prepare: Callable[[str], Awaitable[str]] | None = None,
+        extra: dict[str, Any] | None = None,
     ) -> Job:
         self._cleanup()
         job = Job(id=uuid.uuid4().hex, prompt=prompt)
         self.jobs[job.id] = job
-        task = asyncio.create_task(self._run(job, chain, negative, mode, variants, seed, size, prepare))
+        task = asyncio.create_task(self._run(job, chain, negative, mode, variants, seed, size, prepare, extra or {}))
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
         return job
 
-    async def _run(self, job: Job, chain, negative, mode, variants, seed, size, prepare) -> None:  # noqa: ANN001
+    async def _run(self, job: Job, chain, negative, mode, variants, seed, size, prepare, extra) -> None:  # noqa: ANN001
         job.status = "running"
         try:
             if prepare:
@@ -76,7 +77,7 @@ class JobRunner:
                 job.prompt = await prepare(job.prompt)
             base_seed = seed if seed is not None else random.randint(1, 2**31 - 1)
             for i in range(variants):
-                req = ImageRequest(prompt=job.prompt, negative=negative, size=size, seed=base_seed + i)
+                req = ImageRequest(prompt=job.prompt, negative=negative, size=size, seed=base_seed + i, **extra)
                 job.message = f"Генерую варіант {i + 1} з {variants}…"
                 image = await self._one(job, chain, req, mode)
                 if image:
@@ -91,6 +92,7 @@ class JobRunner:
     async def _one(self, job: Job, chain: list[ImageProvider], req: ImageRequest, mode: str) -> dict[str, Any] | None:
         for provider in chain:
             try:
+                job.message = f"{provider.label}: генерую…"
                 raw = await provider.generate(req)
                 png = await asyncio.to_thread(to_tattoo_png, raw, mode)
             except ProviderError as e:
