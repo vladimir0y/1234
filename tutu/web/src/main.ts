@@ -588,7 +588,14 @@ function groupedForSelection(faces: number[], mesh: { positions: ArrayLike<numbe
   if (canvasMode === "wrap") {
     // One canvas around the body's vertical axis, cut along the left side: chest, right side
     // and back form one continuous surface for a single composition.
-    const c = boneHeads["spine_02"] ?? [0, 0, 0];
+    // The axis goes through the middle of the selected surface (not the spine, which lies
+    // near the back), so the chest and the back keep similar scales.
+    const used = new Set<number>();
+    for (const f of faces) for (let k = 0; k < 3; k++) used.add(mesh.indices[3 * f + k]);
+    let cx = 0, cz = 0, cy = 0;
+    for (const v of used) { cx += mesh.positions[3 * v]; cy += mesh.positions[3 * v + 1]; cz += mesh.positions[3 * v + 2]; }
+    const n = Math.max(1, used.size);
+    const c: V3 = [cx / n, cy / n, cz / n];
     specs.push({ label: "Навколо тіла", mapping: { kind: "cylinder", front: [0, 0, 1], seam: Math.PI / 2, path: [[c[0], c[1] - 1, c[2]], [c[0], c[1] + 1, c[2]]] } });
     return { faceGroup, specs };
   }
