@@ -12,3 +12,4 @@ ios/Tutu/Resources/Info.plist
 web/dist-standalone/
 web/dist-artifact/
 web/standalone/body-model.bin
+web/standalone/examples/sketch-lines.png
