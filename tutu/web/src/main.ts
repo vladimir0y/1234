@@ -967,6 +967,7 @@ async function openState(state: ProjectState, name: string) {
 
 /** Ready-made example projects shipped next to the page (browser build). */
 const EXAMPLES = [
+  { id: "wrap", name: "Одна композиція навколо тулуба: дракон + обличчя" },
   { id: "chest-back", name: "Дракон на грудях + обличчя на спині (живопис, світло)" },
   { id: "dragon-color", name: "Дракон у кольорі + портрет (генерація однією композицією)" },
   { id: "dragon", name: "Дракон ч/б + портрет (зібраний з частин)" },
