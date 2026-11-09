@@ -959,10 +959,7 @@ async function openState(state: ProjectState, name: string) {
 }
 
 /** Ready-made example projects shipped next to the page (browser build). */
-const EXAMPLES = [
-  { id: "snake-portrait", name: "Приклад: змія спереду + портрет на спині" },
-  { id: "snake-portrait-2", name: "Приклад: змія + портрет (варіант 2)" },
-];
+const EXAMPLES = [{ id: "sketch", name: "Ескіз (контури): змія спереду + портрет на спині" }];
 async function openExample(id: string) {
   const r = await fetch(new URL(`./examples/${id}.json`, document.baseURI).href);
   if (!r.ok) throw new Error("Приклад не знайдено");
@@ -1117,6 +1114,27 @@ $$<HTMLButtonElement>(".tabs button").forEach((b) =>
       rotation += Math.atan2(a[1] - b[1], ua - ub) - Math.PI / 2;
     }
     editor.updateLayer(layer, { x: x + (opts.dx ?? 0), y: y + (opts.dy ?? 0), width: w, flipX: !!opts.flip, rotation });
+  },
+  /** Canvas outline and joints in regionCanvas(long) coordinates (y down), for drawing compositions. */
+  canvasInfo(long = 1000) {
+    const size = editor.regionCanvas(long);
+    const b = editor.bounds;
+    const k = size.width / Math.max(b.maxU - b.minU, 1e-6);
+    const joints: Record<string, Record<string, [number, number]>> = {};
+    for (const g of groupBoxes()) {
+      if (!g.map) continue;
+      joints[g.label] = Object.fromEntries(
+        Object.entries(boneHeads).map(([n, p]) => [n, [Math.round((g.map!.sx * p[0] + g.map!.du - b.minU) * k), Math.round((b.maxV - p[1]) * k)]]),
+      );
+    }
+    const groups = groupBoxes().map((g) => ({ label: g.label, x0: Math.round((g.minU - b.minU) * k), x1: Math.round((g.maxU - b.minU) * k), y0: Math.round((b.maxV - g.maxV) * k), y1: Math.round((b.maxV - g.minV) * k) }));
+    return { size, metersPerUnit: 1 / k, outline: editor.regionOutline(long, 900), groups, joints };
+  },
+  /** Adds an image that covers the whole canvas (same proportions as canvasInfo). */
+  async addCanvasLayer(url: string, name: string) {
+    const img = await loadImage(url);
+    const layer = editor.addImageLayer(img, name);
+    editor.fitLayerToRegion(layer);
   },
   exportState(): ProjectState {
     return {
