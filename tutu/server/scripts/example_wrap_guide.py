@@ -16,9 +16,9 @@ def paste(img, box, mask):
 face = Image.open(D+'v3-back-0.webp').convert('RGB')
 w, h = face.size; yy, xx = np.mgrid[0:h, 0:w]
 r = np.hypot((xx/w-0.5)/0.5, (yy/h-0.42)/0.52); m = Image.fromarray((np.clip((1-r)/0.3, 0, 1)*255).astype(np.uint8))
-paste(face, (28, -6, 372, 580), m)
+paste(face, (55, -30, 375, 515), m)
 # dragon body: from the back of the head over the right shoulder, down around the hair
-body = [(585, 470), (560, 565), (490, 615), (420, 600), (392, 500), (395, 360), (398, 220), (370, 90), (300, 22), (200, 4), (100, 20), (35, 90), (22, 220), (30, 330)]
+body = [(585, 470), (560, 565), (490, 615), (410, 610), (330, 585), (240, 600), (140, 590), (60, 520), (40, 400), (45, 270), (70, 150), (130, 70)]
 def catmull(pts, n=20):
     out = []; P = [pts[0]] + pts + [pts[-1]]
     for i in range(1, len(P)-2):
@@ -65,10 +65,10 @@ head = head.crop((xs.min(), ys.min(), xs.max()+1, ys.max()+1))
 hm = Image.fromarray(((np.asarray(head.convert('L')) < 238)*255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(2))
 hw = 265; hh = hw*head.height/head.width
 paste(head, (455, 40, 455+hw, 40+hh), hm)
-g.save('/tmp/claude-0/wrap/guide.png')
+g.save('/tmp/claude-0/wrap/guide2.png')
 # preview with the body outline
 p = g.copy(); dp = ImageDraw.Draw(p)
 for sg in I['outline'].split('M')[1:]:
     nums = list(map(float, re.findall(r'-?\d+\.?\d*', sg)))
     dp.line([(x*S, y*S) for x, y in zip(nums[0::2], nums[1::2])] + [(nums[0]*S, nums[1]*S)], fill=(160, 160, 160), width=2)
-p.save('/tmp/claude-0/wrap/guide-preview.png'); print(GW, GH)
+p.save('/tmp/claude-0/wrap/guide2-preview.png'); print(GW, GH)
