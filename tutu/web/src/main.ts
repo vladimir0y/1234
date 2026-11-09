@@ -959,7 +959,10 @@ async function openState(state: ProjectState, name: string) {
 }
 
 /** Ready-made example projects shipped next to the page (browser build). */
-const EXAMPLES = [{ id: "snake-portrait", name: "Приклад: змія спереду + портрет на спині" }];
+const EXAMPLES = [
+  { id: "snake-portrait", name: "Приклад: змія спереду + портрет на спині" },
+  { id: "snake-portrait-2", name: "Приклад: змія + портрет (варіант 2)" },
+];
 async function openExample(id: string) {
   const r = await fetch(new URL(`./examples/${id}.json`, document.baseURI).href);
   if (!r.ok) throw new Error("Приклад не знайдено");
