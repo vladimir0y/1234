@@ -11,7 +11,7 @@ export type V3 = [number, number, number];
 
 export type GroupMapping =
   /** Unrolled around a polyline axis (joints of a limb, or a vertical line for the torso). */
-  | { kind: "cylinder"; path: V3[]; front: V3 }
+  | { kind: "cylinder"; path: V3[]; front: V3; seam?: number }
   | { kind: "project"; side: "front" | "back" };
 
 export interface GroupSpec {
@@ -25,6 +25,8 @@ export interface GroupedUnwrap extends CombinedUnwrap {
     label: string; minU: number; minV: number; maxU: number; maxV: number;
     /** Front/back projections: canvas u = sx * x + du, v = y (body coordinates). */
     map?: { sx: number; du: number };
+    /** Single-axis cylinders: u = (angle - seam mod 2pi) * R * sign + du, v = height along the axis + v0. */
+    cyl?: { a: V3; d: V3; e1: V3; e2: V3; seam: number; R: number; sign: number; du: number };
   }>;
 }
 
@@ -122,7 +124,7 @@ export function groupedUnwrap(
       for (const a of angle.values()) bins[Math.floor(((a + Math.PI) / (2 * Math.PI)) * 36) % 36]++;
       let best = 0;
       for (let b = 1; b < 36; b++) if (bins[b] < bins[best]) best = b;
-      seam = ((best + 0.5) / 36) * 2 * Math.PI - Math.PI;
+      seam = spec.mapping.seam ?? ((best + 0.5) / 36) * 2 * Math.PI - Math.PI;
       for (const [v, a] of angle) {
         let t = a - seam;
         while (t < 0) t += 2 * Math.PI;
@@ -173,7 +175,10 @@ export function groupedUnwrap(
     const map = spec.mapping.kind === "project"
       ? { sx: (spec.mapping.side === "front" ? 1 : -1) * (signed < 0 ? -1 : 1), du: cursor - minU }
       : undefined;
-    groups.push({ label: spec.label, minU: cursor, maxU: cursor + maxU - minU, minV, maxV, map });
+    const cyl = spec.mapping.kind === "cylinder" && segs.length === 1
+      ? { a: segs[0].a, d: segs[0].d, e1: segs[0].e1, e2: segs[0].e2, seam, R, sign: signed < 0 ? -1 : 1, du: cursor - minU }
+      : undefined;
+    groups.push({ label: spec.label, minU: cursor, maxU: cursor + maxU - minU, minV, maxV, map, cyl });
     cursor += maxU - minU + GAP;
   });
 

@@ -23,7 +23,7 @@ interface ProjectState {
   model: BodyModel | { type: "scan"; id: string };
   selection: number[]; // run-length encoded [start, length, ...]
   up?: [number, number, number]; // unwrap orientation (limb axis for zones)
-  canvas?: "unwrap" | "parts" | "front-back";
+  canvas?: "unwrap" | "parts" | "front-back" | "wrap";
   pose?: Partial<PoseParams>;
   layers: ReturnType<UnwrapEditor["serialize"]>;
 }
@@ -567,7 +567,7 @@ function addToGallery(img: HTMLImageElement, title: string) {
 }
 
 // --- Canvas mode, region shape and style references for generators
-let canvasMode: "unwrap" | "parts" | "front-back" = "unwrap";
+let canvasMode: "unwrap" | "parts" | "front-back" | "wrap" = "unwrap";
 let vertexPart: Uint8Array | null = null;
 let boneHeads: Record<string, V3> = {};
 
@@ -583,6 +583,13 @@ function groupedForSelection(faces: number[], mesh: { positions: ArrayLike<numbe
       faceGroup[i] = z >= 0 ? 0 : 1;
     });
     specs.push({ label: "Спереду", mapping: { kind: "project", side: "front" } }, { label: "Ззаду", mapping: { kind: "project", side: "back" } });
+    return { faceGroup, specs };
+  }
+  if (canvasMode === "wrap") {
+    // One canvas around the body's vertical axis, cut along the left side: chest, right side
+    // and back form one continuous surface for a single composition.
+    const c = boneHeads["spine_02"] ?? [0, 0, 0];
+    specs.push({ label: "Навколо тіла", mapping: { kind: "cylinder", front: [0, 0, 1], seam: Math.PI / 2, path: [[c[0], c[1] - 1, c[2]], [c[0], c[1] + 1, c[2]]] } });
     return { faceGroup, specs };
   }
   // By body part. Without a skeleton (own 3D file) everything is one part around the body axis.
@@ -1127,6 +1134,19 @@ $$<HTMLButtonElement>(".tabs button").forEach((b) =>
     const k = size.width / Math.max(b.maxU - b.minU, 1e-6);
     const joints: Record<string, Record<string, [number, number]>> = {};
     for (const g of groupBoxes()) {
+      if (g.cyl) {
+        const { a, d, e1, e2, seam, R, sign, du } = g.cyl;
+        joints[g.label] = Object.fromEntries(Object.entries(boneHeads).map(([n, p]) => {
+          const r: V3 = [p[0] - a[0], p[1] - a[1], p[2] - a[2]];
+          const h = r[0] * d[0] + r[1] * d[1] + r[2] * d[2];
+          const rr: V3 = [r[0] - d[0] * h, r[1] - d[1] * h, r[2] - d[2] * h];
+          let t = Math.atan2(rr[0] * e1[0] + rr[1] * e1[1] + rr[2] * e1[2], rr[0] * e2[0] + rr[1] * e2[1] + rr[2] * e2[2]) - seam;
+          while (t < 0) t += 2 * Math.PI;
+          while (t >= 2 * Math.PI) t -= 2 * Math.PI;
+          return [n, [Math.round((t * R * sign + du - b.minU) * k), Math.round((b.maxV - h) * k)]];
+        }));
+        continue;
+      }
       if (!g.map) continue;
       joints[g.label] = Object.fromEntries(
         Object.entries(boneHeads).map(([n, p]) => [n, [Math.round((g.map!.sx * p[0] + g.map!.du - b.minU) * k), Math.round((b.maxV - p[1]) * k)]]),
