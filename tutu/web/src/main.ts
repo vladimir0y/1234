@@ -1089,14 +1089,14 @@ $$<HTMLButtonElement>(".tabs button").forEach((b) =>
     await unwrapSelection();
   },
   /** Add an image layer into one labelled canvas part, covering `fill` of its width. */
-  async addLayerToGroup(url: string, name: string, group: string, opts: { fill?: number; dx?: number; dy?: number; widthM?: number } = {}) {
+  async addLayerToGroup(url: string, name: string, group: string, opts: { fill?: number; dx?: number; dy?: number; widthM?: number; flip?: boolean } = {}) {
     const img = await loadImage(url);
     const layer = editor.addImageLayer(img, name);
     const g = editor.geometry?.labels?.find((l) => l.text === group);
     const box = groupBoxes().find((b) => b.label === group);
     if (!g || !box) return;
     const w = opts.widthM ?? (box.maxU - box.minU) * (opts.fill ?? 0.9);
-    editor.updateLayer(layer, { x: (box.minU + box.maxU) / 2 + (opts.dx ?? 0), y: (box.minV + box.maxV) / 2 + (opts.dy ?? 0), width: w });
+    editor.updateLayer(layer, { x: (box.minU + box.maxU) / 2 + (opts.dx ?? 0), y: (box.minV + box.maxV) / 2 + (opts.dy ?? 0), width: w, flipX: !!opts.flip });
   },
   exportState(): ProjectState {
     return {
