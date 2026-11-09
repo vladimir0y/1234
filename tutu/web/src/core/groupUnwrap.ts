@@ -21,7 +21,11 @@ export interface GroupSpec {
 
 export interface GroupedUnwrap extends CombinedUnwrap {
   /** Each group's box on the canvas (metres) and label. */
-  groups: Array<{ label: string; minU: number; minV: number; maxU: number; maxV: number }>;
+  groups: Array<{
+    label: string; minU: number; minV: number; maxU: number; maxV: number;
+    /** Front/back projections: canvas u = sx * x + du, v = y (body coordinates). */
+    map?: { sx: number; du: number };
+  }>;
 }
 
 const GAP = 0.04;
@@ -166,7 +170,10 @@ export function groupedUnwrap(
       maxV = Math.max(maxV, outUV[2 * i + 1]);
     }
     for (let i = startV; i < outSource.length; i++) outUV[2 * i] += cursor - minU;
-    groups.push({ label: spec.label, minU: cursor, maxU: cursor + maxU - minU, minV, maxV });
+    const map = spec.mapping.kind === "project"
+      ? { sx: (spec.mapping.side === "front" ? 1 : -1) * (signed < 0 ? -1 : 1), du: cursor - minU }
+      : undefined;
+    groups.push({ label: spec.label, minU: cursor, maxU: cursor + maxU - minU, minV, maxV, map });
     cursor += maxU - minU + GAP;
   });
 

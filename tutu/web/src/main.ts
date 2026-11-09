@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { api, type BodyMeshData, type BodyPreset, type BodyPresetParams } from "./api";
 import { createBackend, STANDALONE, type Backend } from "./backend";
 import { isRest, POSE_PRESETS, Poser, REST_POSE, type PoseParams } from "./core/pose";
-import { groupedUnwrap, PART_LABELS, partOfBone, type GroupSpec, type V3 } from "./core/groupUnwrap";
+import { groupedUnwrap, PART_LABELS, partOfBone, type GroupSpec, type GroupedUnwrap, type V3 } from "./core/groupUnwrap";
 import { extensionOf, MESH_EXTENSIONS, parseMesh, prepareBody } from "./core/loaders";
 import { setPngDpi } from "./core/png";
 import { acceptedComponents, buildFaceAdjacency, connectedComponents, extractPatch, smoothSelection } from "./core/topology";
@@ -233,7 +233,7 @@ function setInfo(text: string, warn = false) {
 }
 
 let unwrapRun = 0;
-let lastGroups: Array<{ label: string; minU: number; minV: number; maxU: number; maxV: number }> = [];
+let lastGroups: GroupedUnwrap["groups"] = [];
 const groupBoxes = () => lastGroups;
 async function unwrapSelection() {
   const mesh = viewer.mesh;
@@ -1089,14 +1089,31 @@ $$<HTMLButtonElement>(".tabs button").forEach((b) =>
     await unwrapSelection();
   },
   /** Add an image layer into one labelled canvas part, covering `fill` of its width. */
-  async addLayerToGroup(url: string, name: string, group: string, opts: { fill?: number; dx?: number; dy?: number; widthM?: number; flip?: boolean } = {}) {
+  /**
+   * Adds an image to one canvas group. `along: [boneA, boneB]` (front/back canvases)
+   * centres it between two joints and turns its vertical axis along that segment.
+   */
+  async addLayerToGroup(
+    url: string, name: string, group: string,
+    opts: { fill?: number; dx?: number; dy?: number; widthM?: number; flip?: boolean; along?: [string, string]; t?: number; rotation?: number } = {},
+  ) {
     const img = await loadImage(url);
     const layer = editor.addImageLayer(img, name);
     const g = editor.geometry?.labels?.find((l) => l.text === group);
     const box = groupBoxes().find((b) => b.label === group);
     if (!g || !box) return;
     const w = opts.widthM ?? (box.maxU - box.minU) * (opts.fill ?? 0.9);
-    editor.updateLayer(layer, { x: (box.minU + box.maxU) / 2 + (opts.dx ?? 0), y: (box.minV + box.maxV) / 2 + (opts.dy ?? 0), width: w, flipX: !!opts.flip });
+    let x = (box.minU + box.maxU) / 2, y = (box.minV + box.maxV) / 2, rotation = opts.rotation ?? 0;
+    const [a, b] = (opts.along ?? []).map((n) => boneHeads[n]);
+    if (a && b && box.map) {
+      const ua = box.map.sx * a[0] + box.map.du, ub = box.map.sx * b[0] + box.map.du;
+      const t = opts.t ?? 0.5;
+      x = ua + (ub - ua) * t;
+      y = a[1] + (b[1] - a[1]) * t;
+      // Image "up" points from b back to a.
+      rotation += Math.atan2(a[1] - b[1], ua - ub) - Math.PI / 2;
+    }
+    editor.updateLayer(layer, { x: x + (opts.dx ?? 0), y: y + (opts.dy ?? 0), width: w, flipX: !!opts.flip, rotation });
   },
   exportState(): ProjectState {
     return {
