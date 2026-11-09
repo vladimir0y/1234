@@ -54,6 +54,8 @@ cd web && npm run build:artifact           # -> web/dist-artifact/
 
 ### Постійне посилання (безкоштовно, Render)
 
+Покрокова інструкція з FLUX: [docs/DEPLOY.md](docs/DEPLOY.md).
+
 1. Відкрийте https://render.com/deploy?repo=https://github.com/vladimir0y/1234 і увійдіть через GitHub
    (для приватного репозиторію дайте Render доступ до `1234`).
 2. Натисніть **Apply** — Render збере `tutu/Dockerfile` за `render.yaml`.

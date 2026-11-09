@@ -26,6 +26,7 @@ STYLES_LIST = [
     Style("tribal", "Трайбл", "tribal tattoo, flowing bold black shapes, polynesian inspired", "ink"),
     Style("sketch", "Скетч", "sketch style tattoo, loose pencil-like lines, artistic hatching", "ink"),
     Style("realism", "Реалізм ч/б", "black and grey realism tattoo, smooth gradients, high detail", "ink"),
+    Style("realism-color", "Реалізм кольоровий", "hyperrealistic colour realism artwork, painterly, cinematic light, smooth skin tones, high detail", "color"),
     Style("traditional", "Traditional", "american traditional tattoo flash, bold black outlines, limited flat colours", "color"),
     Style("neo-traditional", "Neo-traditional", "neo traditional tattoo, bold outlines, rich colours, ornate details", "color"),
     Style("japanese", "Японський", "japanese irezumi tattoo style, bold outlines, waves and wind bars", "color"),

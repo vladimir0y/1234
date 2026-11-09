@@ -975,7 +975,7 @@ async function refreshProjectList() {
   sel.innerHTML = "";
   sel.add(new Option(items.length ? `Мої проєкти (${items.length})` : "Немає збережених", ""));
   for (const p of items) sel.add(new Option(`${p.name} · ${new Date(p.updated).toLocaleDateString("uk")}`, p.id));
-  if (STANDALONE) for (const e of EXAMPLES) sel.add(new Option(e.name, `example:${e.id}`));
+  for (const e of EXAMPLES) sel.add(new Option(e.name, `example:${e.id}`));
   sel.disabled = sel.options.length < 2;
 }
 $<HTMLSelectElement>("#projects").addEventListener("change", async (e) => {
