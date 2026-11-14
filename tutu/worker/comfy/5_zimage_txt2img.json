@@ -1,0 +1,12 @@
+{
+ "unet": {"class_type": "UNETLoader", "inputs": {"unet_name": "z_image_turbo_bf16.safetensors", "weight_dtype": "fp8_e4m3fn"}},
+ "clip": {"class_type": "CLIPLoader", "inputs": {"clip_name": "qwen_3_4b.safetensors", "type": "lumina2", "device": "default"}},
+ "vae": {"class_type": "VAELoader", "inputs": {"vae_name": "ae.safetensors"}},
+ "shift": {"class_type": "ModelSamplingAuraFlow", "inputs": {"model": ["unet", 0], "shift": 3.0}},
+ "pos": {"class_type": "CLIPTextEncode", "inputs": {"clip": ["clip", 0], "text": "contemporary fine art oil painting, dark moody background, chiaroscuro, a single soft warm light from the upper left, muted desaturated palette, visible painterly brushstrokes, one continuous scene in a wide panorama: in the left half a large serene face of a young woman with closed eyes fills the whole height, auburn hair dissolving into darkness; in the right half the head of a modern sleek dragon made of dark smoke and polished black scales roars with open jaws; the dragon's long body coils from its head down, flows along the bottom and rises up around the woman, wrapping her, elegant modern design, no classic horns"}},
+ "neg": {"class_type": "ConditioningZeroOut", "inputs": {"conditioning": ["pos", 0]}},
+ "latent": {"class_type": "EmptySD3LatentImage", "inputs": {"width": 1024, "height": 896, "batch_size": 1}},
+ "sample": {"class_type": "KSampler", "inputs": {"model": ["shift", 0], "positive": ["pos", 0], "negative": ["neg", 0], "latent_image": ["latent", 0], "seed": 101, "steps": 8, "cfg": 1.0, "sampler_name": "res_multistep", "scheduler": "simple", "denoise": 1.0}},
+ "decode": {"class_type": "VAEDecode", "inputs": {"samples": ["sample", 0], "vae": ["vae", 0]}},
+ "save": {"class_type": "SaveImage", "inputs": {"images": ["decode", 0], "filename_prefix": "zimage"}}
+}
