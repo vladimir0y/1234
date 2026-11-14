@@ -1,0 +1,135 @@
+﻿{
+    "unet":  {
+                 "class_type":  "UNETLoader",
+                 "inputs":  {
+                                "unet_name":  "z_image_turbo_bf16.safetensors",
+                                "weight_dtype":  "fp8_e4m3fn"
+                            }
+             },
+    "clip":  {
+                 "class_type":  "CLIPLoader",
+                 "inputs":  {
+                                "clip_name":  "qwen_3_4b.safetensors",
+                                "type":  "lumina2",
+                                "device":  "default"
+                            }
+             },
+    "vae":  {
+                "class_type":  "VAELoader",
+                "inputs":  {
+                               "vae_name":  "ae.safetensors"
+                           }
+            },
+    "shift":  {
+                  "class_type":  "ModelSamplingAuraFlow",
+                  "inputs":  {
+                                 "model":  [
+                                               "unet",
+                                               0
+                                           ],
+                                 "shift":  3.0
+                             }
+              },
+    "canvas":  {
+                   "class_type":  "TutuCanvas",
+                   "inputs":  {
+                                  "canvas":  "wrap_torso",
+                                  "width":  1024
+                              }
+               },
+    "guide":  {
+                  "class_type":  "TutuLayoutGuide",
+                  "inputs":  {
+                                 "canvas":  [
+                                                "canvas",
+                                                0
+                                            ],
+                                 "preset":  "reference_red_back_dragon_chest",
+                                 "background":  "white",
+                                 "blur":  10
+                             }
+              },
+    "enc":  {
+                "class_type":  "VAEEncode",
+                "inputs":  {
+                               "pixels":  [
+                                              "guide",
+                                              0
+                                          ],
+                               "vae":  [
+                                           "vae",
+                                           0
+                                       ]
+                           }
+            },
+    "pos":  {
+                "class_type":  "CLIPTextEncode",
+                "inputs":  {
+                               "clip":  [
+                                            "clip",
+                                            0
+                                        ],
+                               "text":  "hyperrealistic black and grey tattoo with deep crimson red accents on plain white background, fine detailed tattoo art, stippled shading; on the left a huge face of a beautiful young asian woman fills the whole height, messy dark hair strands across her face, half-open pale eyes, parted lips, freckles, behind her a large red moon and swirling red clouds and smoke; on the right the head of a black dragon with fine scales and red accents roars with open jaws and long fangs facing left, its neck rises up to the top edge; one continuous tattoo design"
+                           }
+            },
+    "negt":  {
+                 "class_type":  "CLIPTextEncode",
+                 "inputs":  {
+                                "clip":  [
+                                             "clip",
+                                             0
+                                         ],
+                                "text":  "text, watermark, signature, frame, dark background, black background, room, cartoon, orange, painting on canvas"
+                            }
+             },
+    "sample":  {
+                   "class_type":  "KSampler",
+                   "inputs":  {
+                                  "model":  [
+                                                "shift",
+                                                0
+                                            ],
+                                  "positive":  [
+                                                   "pos",
+                                                   0
+                                               ],
+                                  "negative":  [
+                                                   "negt",
+                                                   0
+                                               ],
+                                  "latent_image":  [
+                                                       "enc",
+                                                       0
+                                                   ],
+                                  "seed":  101,
+                                  "steps":  8,
+                                  "cfg":  1.0,
+                                  "sampler_name":  "res_multistep",
+                                  "scheduler":  "simple",
+                                  "denoise":  0.8
+                              }
+               },
+    "decode":  {
+                   "class_type":  "VAEDecode",
+                   "inputs":  {
+                                  "samples":  [
+                                                  "sample",
+                                                  0
+                                              ],
+                                  "vae":  [
+                                              "vae",
+                                              0
+                                          ]
+                              }
+               },
+    "save":  {
+                 "class_type":  "SaveImage",
+                 "inputs":  {
+                                "images":  [
+                                               "decode",
+                                               0
+                                           ],
+                                "filename_prefix":  "ref"
+                            }
+             }
+}

@@ -1,0 +1,122 @@
+﻿{
+    "unet":  {
+                 "class_type":  "UNETLoader",
+                 "inputs":  {
+                                "unet_name":  "z_image_turbo_bf16.safetensors",
+                                "weight_dtype":  "fp8_e4m3fn"
+                            }
+             },
+    "clip":  {
+                 "class_type":  "CLIPLoader",
+                 "inputs":  {
+                                "clip_name":  "qwen_3_4b.safetensors",
+                                "type":  "lumina2",
+                                "device":  "default"
+                            }
+             },
+    "vae":  {
+                "class_type":  "VAELoader",
+                "inputs":  {
+                               "vae_name":  "ae.safetensors"
+                           }
+            },
+    "shift":  {
+                  "class_type":  "ModelSamplingAuraFlow",
+                  "inputs":  {
+                                 "model":  [
+                                               "unet",
+                                               0
+                                           ],
+                                 "shift":  3.0
+                             }
+              },
+    "enc":  {
+                "class_type":  "VAEEncode",
+                "inputs":  {
+                               "pixels":  [
+                                              "guide",
+                                              0
+                                          ],
+                               "vae":  [
+                                           "vae",
+                                           0
+                                       ]
+                           }
+            },
+    "pos":  {
+                "class_type":  "CLIPTextEncode",
+                "inputs":  {
+                               "clip":  [
+                                            "clip",
+                                            0
+                                        ],
+                               "text":  "contemporary fine art oil painting tattoo design isolated on plain white background, no background scenery, the image fades softly into white at the edges and the hair dissolves into white before the left edge; chiaroscuro, a single soft warm light from the upper left, muted palette, visible brushstrokes; on the left a large serene face of a young woman with closed eyes fills the whole height, auburn hair; a modern sleek black dragon with a thick muscular body of crisp polished scales wraps around her: its thick body rises in the middle between her face and its head and flows along the bottom, and on the right its head roars with open jaws and long fangs, sleek smooth head, no whiskers, no mane; one continuous painting"
+                           }
+            },
+    "negt":  {
+                 "class_type":  "CLIPTextEncode",
+                 "inputs":  {
+                                "clip":  [
+                                             "clip",
+                                             0
+                                         ],
+                                "text":  "text, watermark, signature, frame, dark background, black background, room, cartoon, classic chinese dragon, fire, two women"
+                            }
+             },
+    "sample":  {
+                   "class_type":  "KSampler",
+                   "inputs":  {
+                                  "model":  [
+                                                "shift",
+                                                0
+                                            ],
+                                  "positive":  [
+                                                   "pos",
+                                                   0
+                                               ],
+                                  "negative":  [
+                                                   "negt",
+                                                   0
+                                               ],
+                                  "latent_image":  [
+                                                       "enc",
+                                                       0
+                                                   ],
+                                  "seed":  101,
+                                  "steps":  8,
+                                  "cfg":  1.0,
+                                  "sampler_name":  "res_multistep",
+                                  "scheduler":  "simple",
+                                  "denoise":  0.8
+                              }
+               },
+    "decode":  {
+                   "class_type":  "VAEDecode",
+                   "inputs":  {
+                                  "samples":  [
+                                                  "sample",
+                                                  0
+                                              ],
+                                  "vae":  [
+                                              "vae",
+                                              0
+                                          ]
+                              }
+               },
+    "save":  {
+                 "class_type":  "SaveImage",
+                 "inputs":  {
+                                "images":  [
+                                               "decode",
+                                               0
+                                           ],
+                                "filename_prefix":  "loop"
+                            }
+             },
+    "guide":  {
+                  "class_type":  "LoadImage",
+                  "inputs":  {
+                                 "image":  "tutu_guide_r2.png"
+                             }
+              }
+}
