@@ -8,3 +8,15 @@
 3. Волосся ліворуч обрізане краєм полотна — нехай м'яко розчиняється раніше (x>40 px).
 4. Прибрати «вуса» й гриву класичного дракона: у промпт "sleek smooth head, no whiskers, no mane".
 Раунд 2: ті самі параметри (denoise 0.8), сіди 202, 303, 404.
+
+## НОВА ЦІЛЬ від власника (замінює попередні правки) — `TARGET_reference.jpg`
+Дійти щонайменше до рівня цього референсу:
+- **Спина:** обличчя дівчини майже на всю спину (від шиї до попереку, центр на хребті), розпатлане темне волосся, напіввідкриті світлі очі, губи; позаду великий **червоний місяць** угорі ліворуч і **червоні хмари/дим** унизу.
+- **Груди:** голова дракона на правому грудному м'язі, паща відкрита до грудини, шия йде вгору через праве плече (далі на руку).
+- **Палітра:** чорно-сірий реалізм + **глибокий червоний** акцент. Без помаранчевого.
+- **Стиль:** реалістичне тату на шкірі (не картина на папері): тло — чиста шкіра/білий, тонкі деталі, дрібна луска, крапкові тіні.
+
+Як генерувати (Z-Image Turbo, 1024×896):
+- Підкладка: вузол «Tutu: розкладка композиції», **preset `reference_red_back_dragon_chest`** (новий, git pull), background white, blur 10. denoise 0.8 (пробуй 0.75–0.9).
+- Промпт: "hyperrealistic black and grey tattoo with deep crimson red accents on plain white background, fine detailed tattoo art, stippled shading; on the left a huge face of a beautiful young asian woman fills the whole height, messy dark hair strands across her face, half-open pale eyes, parted lips, freckles, behind her a large red moon and swirling red clouds and smoke; on the right the head of a black dragon with fine scales and red accents roars with open jaws and long fangs facing left, its neck rises up to the top edge; one continuous tattoo design"
+- Мета на раунд: 3 сіди. Оцінюй сам за переліком вище; найкращі пуш як r02_…, r03_… у tutu-local-gen.
