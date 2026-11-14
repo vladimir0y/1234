@@ -59,14 +59,14 @@ LAYOUTS = {
     # and clouds; the dragon's head on the right pec, its body going up over the right shoulder.
     "reference_red_back_dragon_chest": {
         "canvas": "wrap_torso",
-        "ellipses": [((20, 40, 150, 170), (150, 30, 25)),      # red moon, upper left of the back
-                     ((10, 80, 390, 717), (55, 30, 30)),       # dark hair mass, whole back
-                     ((80, 150, 330, 640), (170, 120, 105)),   # face, centred on the spine (x~200)
+        "ellipses": [((10, 80, 390, 717), (55, 30, 30)),       # dark hair mass, whole back
+                     ((60, 160, 200, 300), (150, 30, 25)),     # red moon, upper left of the back
+                     ((90, 170, 330, 600), (170, 120, 105)),   # face, centred on the spine (x~200)
                      ((95, 170, 210, 420), (200, 150, 130)),   # light on the cheek
                      ((0, 560, 400, 760), (120, 40, 35))],     # red clouds, lower back
         "polygons": [([(440, 70), (520, 40), (620, 90), (650, 170), (600, 230), (545, 300), (500, 290), (470, 200)], (35, 25, 25)),  # head on the right pec
                      ([(545, 200), (640, 175), (600, 290)], (130, 30, 30))],                                                      # open jaws
-        "path": ([(470, 120), (440, 60), (410, 20), (380, 0)], 75, (40, 28, 28)),                                                  # neck up over the right shoulder
+        "path": ([(480, 140), (455, 80), (430, 30), (410, 0)], 95, (40, 28, 28)),                                                  # neck up over the right shoulder
     },
     "face_back_dragon_chest": {
         "canvas": "wrap_torso",

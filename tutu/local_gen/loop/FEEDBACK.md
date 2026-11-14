@@ -20,3 +20,10 @@
 - Підкладка: вузол «Tutu: розкладка композиції», **preset `reference_red_back_dragon_chest`** (новий, git pull), background white, blur 10. denoise 0.8 (пробуй 0.75–0.9).
 - Промпт: "hyperrealistic black and grey tattoo with deep crimson red accents on plain white background, fine detailed tattoo art, stippled shading; on the left a huge face of a beautiful young asian woman fills the whole height, messy dark hair strands across her face, half-open pale eyes, parted lips, freckles, behind her a large red moon and swirling red clouds and smoke; on the right the head of a black dragon with fine scales and red accents roars with open jaws and long fangs facing left, its neck rises up to the top edge; one continuous tattoo design"
 - Мета на раунд: 3 сіди. Оцінюй сам за переліком вище; найкращі пуш як r02_…, r03_… у tutu-local-gen.
+
+## Після раунду 3 (r03_seed303 на тілі — спина вже дуже схожа на референс)
+1. Місяць обрізаний верхнім краєм (лягає на верх плеча): опусти його нижче й ближче до хребта — центр ~(130, 230) од., радіус ~70 од.
+2. Хмари внизу — мультяшні спіралі. Потрібні реалістичні клуби диму/хмар з червоним підсвітленням: "realistic billowing smoke clouds".
+3. Обличчя трохи витягнуте вертикально — зроби зону обличчя ширшою/нижчою (≈ 90–330 по x, 170–600 по y).
+4. Груди: голова добра, але немає тіла дракона. Шия має бути товстою, лускатою, червоні плавці, іти вгору через праве плече (верхній край на x≈380–470) — як у референсі.
+5. Стиль: менше «фото», більше тату — "tattoo ink on skin, fine linework, stippling, black and grey realism tattoo".
