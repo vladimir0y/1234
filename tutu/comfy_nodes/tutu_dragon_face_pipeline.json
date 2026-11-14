@@ -1,0 +1,295 @@
+{
+ "ckpt": {
+  "class_type": "CheckpointLoaderSimple",
+  "inputs": {
+   "ckpt_name": "DreamShaperXL_Lightning.safetensors"
+  }
+ },
+ "canvas": {
+  "class_type": "TutuCanvas",
+  "inputs": {
+   "canvas": "wrap_torso",
+   "width": 1024
+  }
+ },
+ "guide": {
+  "class_type": "TutuLayoutGuide",
+  "inputs": {
+   "canvas": [
+    "canvas",
+    0
+   ],
+   "preset": "face_back_dragon_chest",
+   "background": "dark",
+   "blur": 10
+  }
+ },
+ "pos": {
+  "class_type": "CLIPTextEncode",
+  "inputs": {
+   "text": "contemporary fine art oil painting, dark moody background, chiaroscuro, a single soft warm light from the upper left, muted desaturated palette, visible painterly brushstrokes, rich texture, cinematic, masterpiece, one continuous scene in a wide panorama: in the left half a large serene face of a young woman with closed eyes fills the whole height, auburn hair dissolving into darkness; in the right half the head of a modern sleek dragon made of dark smoke and polished black scales roars with open jaws; the dragon's long body coils from its head down, flows along the bottom and rises up around the woman, wrapping her, elegant modern design, no classic horns",
+   "clip": [
+    "ckpt",
+    1
+   ]
+  }
+ },
+ "neg": {
+  "class_type": "CLIPTextEncode",
+  "inputs": {
+   "text": "text, watermark, signature, frame, border, blurry, lowres, deformed, cartoon, anime, 3d render, classic chinese dragon, fire, oversaturated, two women",
+   "clip": [
+    "ckpt",
+    1
+   ]
+  }
+ },
+ "enc": {
+  "class_type": "VAEEncode",
+  "inputs": {
+   "pixels": [
+    "guide",
+    0
+   ],
+   "vae": [
+    "ckpt",
+    2
+   ]
+  }
+ },
+ "s1": {
+  "class_type": "KSampler",
+  "inputs": {
+   "seed": 101,
+   "steps": 6,
+   "cfg": 2,
+   "sampler_name": "dpmpp_sde",
+   "scheduler": "karras",
+   "denoise": 0.82,
+   "model": [
+    "ckpt",
+    0
+   ],
+   "positive": [
+    "pos",
+    0
+   ],
+   "negative": [
+    "neg",
+    0
+   ],
+   "latent_image": [
+    "enc",
+    0
+   ]
+  }
+ },
+ "d1": {
+  "class_type": "VAEDecode",
+  "inputs": {
+   "samples": [
+    "s1",
+    0
+   ],
+   "vae": [
+    "ckpt",
+    2
+   ]
+  }
+ },
+ "p1": {
+  "class_type": "PreviewImage",
+  "inputs": {
+   "images": [
+    "d1",
+    0
+   ]
+  }
+ },
+ "zone": {
+  "class_type": "TutuZoneMask",
+  "inputs": {
+   "canvas": [
+    "canvas",
+    0
+   ],
+   "zone": "dragon_area",
+   "feather": 48,
+   "invert": false
+  }
+ },
+ "dpos": {
+  "class_type": "CLIPTextEncode",
+  "inputs": {
+   "text": "contemporary fine art oil painting, dark moody background, chiaroscuro, a single soft warm light from the upper left, muted desaturated palette, visible painterly brushstrokes, rich texture, cinematic, masterpiece, the head of a modern sleek dragon made of dark smoke and polished black scales roars with open jaws and long fangs, its long body coils down and flows along the bottom behind the woman, same light and brushwork as the rest of the painting",
+   "clip": [
+    "ckpt",
+    1
+   ]
+  }
+ },
+ "dd": {
+  "class_type": "DifferentialDiffusion",
+  "inputs": {
+   "model": [
+    "ckpt",
+    0
+   ]
+  }
+ },
+ "cond": {
+  "class_type": "InpaintModelConditioning",
+  "inputs": {
+   "positive": [
+    "dpos",
+    0
+   ],
+   "negative": [
+    "neg",
+    0
+   ],
+   "vae": [
+    "ckpt",
+    2
+   ],
+   "pixels": [
+    "d1",
+    0
+   ],
+   "mask": [
+    "zone",
+    0
+   ],
+   "noise_mask": true
+  }
+ },
+ "s2": {
+  "class_type": "KSampler",
+  "inputs": {
+   "seed": 202,
+   "steps": 6,
+   "cfg": 2,
+   "sampler_name": "dpmpp_sde",
+   "scheduler": "karras",
+   "denoise": 1.0,
+   "model": [
+    "dd",
+    0
+   ],
+   "positive": [
+    "cond",
+    0
+   ],
+   "negative": [
+    "cond",
+    1
+   ],
+   "latent_image": [
+    "cond",
+    2
+   ]
+  }
+ },
+ "d2": {
+  "class_type": "VAEDecode",
+  "inputs": {
+   "samples": [
+    "s2",
+    0
+   ],
+   "vae": [
+    "ckpt",
+    2
+   ]
+  }
+ },
+ "enc3": {
+  "class_type": "VAEEncode",
+  "inputs": {
+   "pixels": [
+    "d2",
+    0
+   ],
+   "vae": [
+    "ckpt",
+    2
+   ]
+  }
+ },
+ "s3": {
+  "class_type": "KSampler",
+  "inputs": {
+   "seed": 303,
+   "steps": 6,
+   "cfg": 2,
+   "sampler_name": "dpmpp_sde",
+   "scheduler": "karras",
+   "denoise": 0.3,
+   "model": [
+    "ckpt",
+    0
+   ],
+   "positive": [
+    "pos",
+    0
+   ],
+   "negative": [
+    "neg",
+    0
+   ],
+   "latent_image": [
+    "enc3",
+    0
+   ]
+  }
+ },
+ "d3": {
+  "class_type": "VAEDecode",
+  "inputs": {
+   "samples": [
+    "s3",
+    0
+   ],
+   "vae": [
+    "ckpt",
+    2
+   ]
+  }
+ },
+ "body": {
+  "class_type": "TutuBodyPreview",
+  "inputs": {
+   "canvas": [
+    "canvas",
+    0
+   ],
+   "image": [
+    "d3",
+    0
+   ]
+  }
+ },
+ "pbody": {
+  "class_type": "PreviewImage",
+  "inputs": {
+   "images": [
+    "body",
+    0
+   ]
+  }
+ },
+ "save": {
+  "class_type": "TutuSaveForEditor",
+  "inputs": {
+   "canvas": [
+    "canvas",
+    0
+   ],
+   "image": [
+    "d3",
+    0
+   ],
+   "filename_prefix": "dragon_face"
+  }
+ }
+}
