@@ -1,0 +1,161 @@
+{
+ "ckpt": {
+  "class_type": "CheckpointLoaderSimple",
+  "inputs": {
+   "ckpt_name": "DreamShaperXL_Lightning.safetensors"
+  }
+ },
+ "pos": {
+  "class_type": "CLIPTextEncode",
+  "inputs": {
+   "text": "contemporary fine art oil painting, dark moody background, chiaroscuro, a single soft warm light from the upper left, muted desaturated palette, visible painterly brushstrokes, rich texture, cinematic, masterpiece, the head of a modern sleek dragon made of dark smoke and polished black scales roars with open jaws and long fangs, its long body coils down and flows along the bottom behind the woman's shoulder, same light and brushwork as the rest of the painting",
+   "clip": [
+    "ckpt",
+    1
+   ]
+  }
+ },
+ "neg": {
+  "class_type": "CLIPTextEncode",
+  "inputs": {
+   "text": "text, watermark, signature, frame, border, blurry, lowres, deformed, cartoon, anime, 3d render, classic chinese dragon, fire, oversaturated, two women",
+   "clip": [
+    "ckpt",
+    1
+   ]
+  }
+ },
+ "init": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "tutu_scene.png"
+  }
+ },
+ "init_sized": {
+  "class_type": "ImageScale",
+  "inputs": {
+   "image": [
+    "init",
+    0
+   ],
+   "upscale_method": "lanczos",
+   "width": 1024,
+   "height": 896,
+   "crop": "disabled"
+  }
+ },
+ "mask_img": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "tutu_mask.png"
+  }
+ },
+ "mask_sized": {
+  "class_type": "ImageScale",
+  "inputs": {
+   "image": [
+    "mask_img",
+    0
+   ],
+   "upscale_method": "bilinear",
+   "width": 1024,
+   "height": 896,
+   "crop": "disabled"
+  }
+ },
+ "mask": {
+  "class_type": "ImageToMask",
+  "inputs": {
+   "image": [
+    "mask_sized",
+    0
+   ],
+   "channel": "red"
+  }
+ },
+ "dd": {
+  "class_type": "DifferentialDiffusion",
+  "inputs": {
+   "model": [
+    "ckpt",
+    0
+   ]
+  }
+ },
+ "cond": {
+  "class_type": "InpaintModelConditioning",
+  "inputs": {
+   "positive": [
+    "pos",
+    0
+   ],
+   "negative": [
+    "neg",
+    0
+   ],
+   "vae": [
+    "ckpt",
+    2
+   ],
+   "pixels": [
+    "init_sized",
+    0
+   ],
+   "mask": [
+    "mask",
+    0
+   ],
+   "noise_mask": true
+  }
+ },
+ "sample": {
+  "class_type": "KSampler",
+  "inputs": {
+   "seed": 101,
+   "steps": 6,
+   "cfg": 2.0,
+   "sampler_name": "dpmpp_sde",
+   "scheduler": "karras",
+   "denoise": 1.0,
+   "model": [
+    "dd",
+    0
+   ],
+   "positive": [
+    "cond",
+    0
+   ],
+   "negative": [
+    "cond",
+    1
+   ],
+   "latent_image": [
+    "cond",
+    2
+   ]
+  }
+ },
+ "decode": {
+  "class_type": "VAEDecode",
+  "inputs": {
+   "samples": [
+    "sample",
+    0
+   ],
+   "vae": [
+    "ckpt",
+    2
+   ]
+  }
+ },
+ "save": {
+  "class_type": "SaveImage",
+  "inputs": {
+   "images": [
+    "decode",
+    0
+   ],
+   "filename_prefix": "tutu"
+  }
+ }
+}

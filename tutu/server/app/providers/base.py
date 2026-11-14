@@ -23,6 +23,8 @@ class ImageRequest:
     # Guide image for img2img (PNG/WEBP bytes): keeps the composition's layout.
     init_image: bytes | None = None
     denoise: float = 0.6
+    # Inpainting: white = repaint, black = keep (same size as init_image).
+    mask: bytes | None = None
 
     @property
     def dims(self) -> tuple[int, int]:

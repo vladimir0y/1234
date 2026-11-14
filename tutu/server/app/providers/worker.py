@@ -117,4 +117,6 @@ class WorkerProvider:
         if req.init_image:
             payload["init_image"] = base64.b64encode(req.init_image).decode()
             payload["denoise"] = req.denoise
+        if req.mask:
+            payload["mask"] = base64.b64encode(req.mask).decode()
         return await self.hub.submit(payload)

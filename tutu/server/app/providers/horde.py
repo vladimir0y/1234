@@ -17,12 +17,12 @@ ANON = "0000000000"
 MODELS = ["AlbedoBase XL 3.1", "Juggernaut XL", "stable_diffusion"]
 
 
-def _webp_b64(data: bytes, w: int, h: int) -> str:
+def _webp_b64(data: bytes, w: int, h: int, grey: bool = False) -> str:
     from io import BytesIO
 
     from PIL import Image
 
-    img = Image.open(BytesIO(data)).convert("RGB").resize((w, h))
+    img = Image.open(BytesIO(data)).convert("L" if grey else "RGB").resize((w, h))
     out = BytesIO()
     img.save(out, "WEBP", quality=92)
     return base64.b64encode(out.getvalue()).decode()
@@ -58,6 +58,8 @@ class HordeProvider:
             payload["source_image"] = _webp_b64(req.init_image, w, h)
             payload["source_processing"] = "img2img"
             params["denoising_strength"] = req.denoise
+            if req.mask:  # masked img2img: only the white part is repainted
+                payload["source_mask"] = _webp_b64(req.mask, w, h, grey=True)
         async with httpx.AsyncClient(timeout=60, transport=self.transport) as client:
             r = await client.post(f"{API}/generate/async", headers=headers, json=payload)
             if r.status_code >= 400:

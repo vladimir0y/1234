@@ -48,6 +48,8 @@ class GenerateRequest(BaseModel):
     # and how far the result may move away from it (0 = same, 1 = ignore the guide).
     init_image: str | None = Field(default=None, max_length=12_000_000)
     denoise: float = Field(default=0.6, ge=0.05, le=1.0)
+    # Inpainting mask for init_image (base64): white = repaint, black = keep.
+    mask_image: str | None = Field(default=None, max_length=12_000_000)
     # Use the prompt as is (no tattoo-flash wrapping) - for full compositions.
     raw_prompt: bool = False
 
@@ -138,6 +140,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 init = base64.b64decode(req.init_image.split(",", 1)[-1], validate=True)
             except (binascii.Error, ValueError) as e:
                 raise HTTPException(400, "init_image is not base64") from e
+        mask = None
+        if req.mask_image:
+            if init is None:
+                raise HTTPException(400, "mask_image needs init_image")
+            try:
+                mask = base64.b64decode(req.mask_image.split(",", 1)[-1], validate=True)
+            except (binascii.Error, ValueError) as e:
+                raise HTTPException(400, "mask_image is not base64") from e
         chain = provider_chain(settings, req.provider, img2img=init is not None)
         if not chain:
             raise HTTPException(400, "No generator can follow a guide image right now")
@@ -154,7 +164,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return text
 
         prompt = req.prompt if req.raw_prompt else build_prompt(req.prompt, req.style, shape_hint_from_aspect(req.region_aspect))
-        extra = {"width": req.width, "height": req.height, "init_image": init, "denoise": req.denoise}
+        extra = {"width": req.width, "height": req.height, "init_image": init, "denoise": req.denoise, "mask": mask}
         job = jobs.submit(chain, prompt, NEGATIVE, style.mode, req.variants, req.seed, req.size, prepare, extra)
         return job.public()
 

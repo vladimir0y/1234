@@ -1,0 +1,86 @@
+{
+ "ckpt": {
+  "class_type": "CheckpointLoaderSimple",
+  "inputs": {
+   "ckpt_name": "DreamShaperXL_Lightning.safetensors"
+  }
+ },
+ "pos": {
+  "class_type": "CLIPTextEncode",
+  "inputs": {
+   "text": "contemporary fine art oil painting, dark moody background, chiaroscuro, a single soft warm light from the upper left, muted desaturated palette, visible painterly brushstrokes, rich texture, cinematic, masterpiece, one continuous scene in a wide panorama: in the left half a large serene face of a young woman with closed eyes fills the whole height, auburn hair dissolving into darkness; in the right half the head of a modern sleek dragon made of dark smoke and polished black scales roars with open jaws; the dragon's long body coils from its head down, flows along the bottom and rises up around the woman, wrapping her, elegant modern design, no classic horns",
+   "clip": [
+    "ckpt",
+    1
+   ]
+  }
+ },
+ "neg": {
+  "class_type": "CLIPTextEncode",
+  "inputs": {
+   "text": "text, watermark, signature, frame, border, blurry, lowres, deformed, cartoon, anime, 3d render, classic chinese dragon, fire, oversaturated, two women",
+   "clip": [
+    "ckpt",
+    1
+   ]
+  }
+ },
+ "latent": {
+  "class_type": "EmptyLatentImage",
+  "inputs": {
+   "width": 1024,
+   "height": 896,
+   "batch_size": 1
+  }
+ },
+ "sample": {
+  "class_type": "KSampler",
+  "inputs": {
+   "seed": 101,
+   "steps": 6,
+   "cfg": 2.0,
+   "sampler_name": "dpmpp_sde",
+   "scheduler": "karras",
+   "denoise": 1.0,
+   "model": [
+    "ckpt",
+    0
+   ],
+   "positive": [
+    "pos",
+    0
+   ],
+   "negative": [
+    "neg",
+    0
+   ],
+   "latent_image": [
+    "latent",
+    0
+   ]
+  }
+ },
+ "decode": {
+  "class_type": "VAEDecode",
+  "inputs": {
+   "samples": [
+    "sample",
+    0
+   ],
+   "vae": [
+    "ckpt",
+    2
+   ]
+  }
+ },
+ "save": {
+  "class_type": "SaveImage",
+  "inputs": {
+   "images": [
+    "decode",
+    0
+   ],
+   "filename_prefix": "tutu"
+  }
+ }
+}
