@@ -1,0 +1,135 @@
+{
+    "unet":  {
+                 "class_type":  "UNETLoader",
+                 "inputs":  {
+                                "unet_name":  "z_image_turbo_bf16.safetensors",
+                                "weight_dtype":  "fp8_e4m3fn"
+                            }
+             },
+    "clip":  {
+                 "class_type":  "CLIPLoader",
+                 "inputs":  {
+                                "clip_name":  "qwen_3_4b.safetensors",
+                                "type":  "lumina2",
+                                "device":  "default"
+                            }
+             },
+    "vae":  {
+                "class_type":  "VAELoader",
+                "inputs":  {
+                               "vae_name":  "ae.safetensors"
+                           }
+            },
+    "shift":  {
+                  "class_type":  "ModelSamplingAuraFlow",
+                  "inputs":  {
+                                 "model":  [
+                                               "unet",
+                                               0
+                                           ],
+                                 "shift":  3.0
+                             }
+              },
+    "base":  {
+                 "class_type":  "LoadImage",
+                 "inputs":  {
+                                "image":  "tutu_c03_unify.png"
+                            }
+             },
+    "enc":  {
+                "class_type":  "VAEEncode",
+                "inputs":  {
+                               "pixels":  [
+                                              "base_small",
+                                              0
+                                          ],
+                               "vae":  [
+                                           "vae",
+                                           0
+                                       ]
+                           }
+            },
+    "pos":  {
+                "class_type":  "CLIPTextEncode",
+                "inputs":  {
+                               "clip":  [
+                                            "clip",
+                                            0
+                                        ],
+                               "text":  "colour realism tattoo design on white skin: a young asian woman\u0027s face with freckles and dark hair with a subtle iridescent blue rim light on her hair, a dark red moon behind her hair, wisps of red smoke; a black serpent dragon with iridescent oil-slick scales of deep blue, violet and turquoise wraps around her, open jaws with long fangs; one strong light from the upper left, cinematic, one harmonious colour palette"
+                           }
+            },
+    "negt":  {
+                 "class_type":  "CLIPTextEncode",
+                 "inputs":  {
+                                "clip":  [
+                                             "clip",
+                                             0
+                                         ],
+                                "text":  "horns, whiskers, mane, text, watermark"
+                            }
+             },
+    "sample":  {
+                   "class_type":  "KSampler",
+                   "inputs":  {
+                                  "model":  [
+                                                "shift",
+                                                0
+                                            ],
+                                  "positive":  [
+                                                   "pos",
+                                                   0
+                                               ],
+                                  "negative":  [
+                                                   "negt",
+                                                   0
+                                               ],
+                                  "latent_image":  [
+                                                       "enc",
+                                                       0
+                                                   ],
+                                  "seed":  1414,
+                                  "steps":  6,
+                                  "cfg":  1,
+                                  "sampler_name":  "res_multistep",
+                                  "scheduler":  "simple",
+                                  "denoise":  0.25
+                              }
+               },
+    "decode":  {
+                   "class_type":  "VAEDecode",
+                   "inputs":  {
+                                  "samples":  [
+                                                  "sample",
+                                                  0
+                                              ],
+                                  "vae":  [
+                                              "vae",
+                                              0
+                                          ]
+                              }
+               },
+    "save":  {
+                 "class_type":  "SaveImage",
+                 "inputs":  {
+                                "images":  [
+                                               "decode",
+                                               0
+                                           ],
+                                "filename_prefix":  "c03_B2_unify"
+                            }
+             },
+    "base_small":  {
+                       "class_type":  "ImageScale",
+                       "inputs":  {
+                                      "image":  [
+                                                    "base",
+                                                    0
+                                                ],
+                                      "upscale_method":  "lanczos",
+                                      "width":  512,
+                                      "height":  576,
+                                      "crop":  "disabled"
+                                  }
+                   }
+}
