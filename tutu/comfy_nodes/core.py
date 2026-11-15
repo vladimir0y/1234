@@ -161,7 +161,18 @@ def zone_mask(c: Canvas, zones: list[str], feather: int = 40, on_body: bool = Tr
     m = Image.new("L", (c.width, c.height), 0)
     d = ImageDraw.Draw(m)
     for z in zones:
+        if z == "dragon_body":
+            continue
         d.polygon(c.dpx(CANVASES[c.name]["zones"][z]), fill=255)
+    if "dragon_body" in zones:
+        # r18: dragon_area also covered the head and repainted it back into a classic one ->
+        # the body alone, from the preset's paths (a bit wider), minus the head
+        L = LAYOUTS["one_dragon_around_torso"]
+        for pts, w, _ in L["paths"]:
+            r = (w / 2 + 18) * c.scale * c.design[0]
+            for x, y in c.dpx(_spline(pts, 40)):
+                d.ellipse((x - r, y - r, x + r, y + r), fill=255)
+        d.polygon(c.dpx(CANVASES[c.name]["zones"]["dragon_head"]), fill=0)
     if feather > 0:
         m = m.filter(ImageFilter.GaussianBlur(feather / 2))
     a = np.asarray(m, np.float32) / 255

@@ -41,3 +41,10 @@ def test_guide_preview_editor():
     assert p.shape == g.shape and 0 <= p.min() and p.max() <= 1
     png = core.for_editor(c, np.ones((100, 100, 3), np.float32))
     assert png.size == (c.width, c.height) and np.asarray(png)[..., 3].max() == 0   # white paper = no ink
+
+
+def test_dragon_body_zone_leaves_the_head():
+    c = core.load_canvas("wrap_torso", 512)
+    body = core.zone_mask(c, ["dragon_body"], 0, on_body=False)
+    head = core.zone_mask(c, ["dragon_head"], 0, on_body=False)
+    assert body.mean() > 0.1 and (body * head).max() == 0

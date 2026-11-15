@@ -11,7 +11,7 @@ import numpy as np
 
 from . import core
 
-ZONES = ["back", "chest", "right_side", "left_side", "lower_back", "belly", "front", "dragon_area", "dragon_head", "everything"]
+ZONES = ["back", "chest", "right_side", "left_side", "lower_back", "belly", "front", "dragon_area", "dragon_head", "dragon_body", "everything"]
 
 
 def _img(a: np.ndarray):
@@ -63,7 +63,8 @@ class TutuZoneMask:
         }, "optional": {"also": (["none"] + ZONES, {"default": "none"})}}
 
     def run(self, canvas, zone, feather, invert, also="none"):
-        zones = [z for z in (zone, also) if z != "none" and z in core.CANVASES[canvas.name]["zones"]]
+        known = set(core.CANVASES[canvas.name]["zones"]) | ({"dragon_body"} if canvas.name == "wrap_torso" else set())
+        zones = [z for z in (zone, also) if z != "none" and z in known]
         if not zones:
             raise ValueError(f"Canvas {canvas.name} has none of: {zone}, {also}")
         m = core.zone_mask(canvas, zones, feather)
