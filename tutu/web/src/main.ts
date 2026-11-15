@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { api, type BodyMeshData, type BodyPreset, type BodyPresetParams } from "./api";
 import { createBackend, STANDALONE, type Backend } from "./backend";
 import { isRest, POSE_PRESETS, Poser, REST_POSE, type PoseParams } from "./core/pose";
-import { groupedUnwrap, PART_LABELS, partOfBone, type GroupSpec, type GroupedUnwrap, type V3 } from "./core/groupUnwrap";
+import { groupedUnwrap, surfacePerimeter, surfaceUV, PART_LABELS, partOfBone, type GroupSpec, type GroupedUnwrap, type V3 } from "./core/groupUnwrap";
 import { extensionOf, MESH_EXTENSIONS, parseMesh, prepareBody } from "./core/loaders";
 import { setPngDpi } from "./core/png";
 import { acceptedComponents, buildFaceAdjacency, connectedComponents, extractPatch, smoothSelection } from "./core/topology";
@@ -596,7 +596,7 @@ function groupedForSelection(faces: number[], mesh: { positions: ArrayLike<numbe
     for (const v of used) { cx += mesh.positions[3 * v]; cy += mesh.positions[3 * v + 1]; cz += mesh.positions[3 * v + 2]; }
     const n = Math.max(1, used.size);
     const c: V3 = [cx / n, cy / n, cz / n];
-    specs.push({ label: "Навколо тіла", mapping: { kind: "cylinder", front: [0, 0, 1], seam: Math.PI / 2, path: [[c[0], c[1] - 1, c[2]], [c[0], c[1] + 1, c[2]]] } });
+    specs.push({ label: "Навколо тіла", mapping: { kind: "cylinder", front: [0, 0, 1], seam: Math.PI / 2, surface: true, path: [[c[0], c[1] - 1, c[2]], [c[0], c[1] + 1, c[2]]] } });
     return { faceGroup, specs };
   }
   // By body part. Without a skeleton (own 3D file) everything is one part around the body axis.
@@ -1144,7 +1144,7 @@ $$<HTMLButtonElement>(".tabs button").forEach((b) =>
     const joints: Record<string, Record<string, [number, number]>> = {};
     for (const g of groupBoxes()) {
       if (g.cyl) {
-        const { a, d, e1, e2, seam, R, sign, du } = g.cyl;
+        const { a, d, e1, e2, seam, R, sign, du, surface } = g.cyl;
         joints[g.label] = Object.fromEntries(Object.entries(boneHeads).map(([n, p]) => {
           const r: V3 = [p[0] - a[0], p[1] - a[1], p[2] - a[2]];
           const h = r[0] * d[0] + r[1] * d[1] + r[2] * d[2];
@@ -1152,6 +1152,10 @@ $$<HTMLButtonElement>(".tabs button").forEach((b) =>
           let t = Math.atan2(rr[0] * e1[0] + rr[1] * e1[1] + rr[2] * e1[2], rr[0] * e2[0] + rr[1] * e2[1] + rr[2] * e2[2]) - seam;
           while (t < 0) t += 2 * Math.PI;
           while (t >= 2 * Math.PI) t -= 2 * Math.PI;
+          if (surface) {
+            const [su, sv] = surfaceUV(surface, h, t);
+            return [n, [Math.round((su * sign + du - b.minU) * k), Math.round((b.maxV - sv) * k)]];
+          }
           return [n, [Math.round((t * R * sign + du - b.minU) * k), Math.round((b.maxV - h) * k)]];
         }));
         continue;
@@ -1161,7 +1165,11 @@ $$<HTMLButtonElement>(".tabs button").forEach((b) =>
         Object.entries(boneHeads).map(([n, p]) => [n, [Math.round((g.map!.sx * p[0] + g.map!.du - b.minU) * k), Math.round((b.maxV - p[1]) * k)]]),
       );
     }
-    const groups = groupBoxes().map((g) => ({ label: g.label, x0: Math.round((g.minU - b.minU) * k), x1: Math.round((g.maxU - b.minU) * k), y0: Math.round((b.maxV - g.maxV) * k), y1: Math.round((b.maxV - g.minV) * k) }));
+    const groups = groupBoxes().map((g) => ({
+      label: g.label, x0: Math.round((g.minU - b.minU) * k), x1: Math.round((g.maxU - b.minU) * k), y0: Math.round((b.maxV - g.maxV) * k), y1: Math.round((b.maxV - g.minV) * k),
+      // Around-the-body canvases: one full turn in canvas units (past it the picture repeats across the seam).
+      ...(g.cyl ? { turn: Math.round((g.cyl.surface ? surfacePerimeter(g.cyl.surface, (g.minV + g.maxV) / 2) : 2 * Math.PI * g.cyl.R) * k) } : {}),
+    }));
     return { size, metersPerUnit: 1 / k, outline: editor.regionOutline(long, 900), groups, joints };
   },
   /** Adds an image that covers the whole canvas (same proportions as canvasInfo). */

@@ -11,7 +11,9 @@ export type V3 = [number, number, number];
 
 export type GroupMapping =
   /** Unrolled around a polyline axis (joints of a limb, or a vertical line for the torso). */
-  | { kind: "cylinder"; path: V3[]; front: V3; seam?: number }
+  /** `surface`: measure along the skin (arc length around and up the body) instead of angle x radius,
+   *  so a picture keeps its proportions on a flat back, a narrow side or a curved shoulder. */
+  | { kind: "cylinder"; path: V3[]; front: V3; seam?: number; surface?: boolean }
   | { kind: "project"; side: "front" | "back" };
 
 export interface GroupSpec {
@@ -26,8 +28,114 @@ export interface GroupedUnwrap extends CombinedUnwrap {
     /** Front/back projections: canvas u = sx * x + du, v = y (body coordinates). */
     map?: { sx: number; du: number };
     /** Single-axis cylinders: u = (angle - seam mod 2pi) * R * sign + du, v = height along the axis + v0. */
-    cyl?: { a: V3; d: V3; e1: V3; e2: V3; seam: number; R: number; sign: number; du: number };
+    cyl?: { a: V3; d: V3; e1: V3; e2: V3; seam: number; R: number; sign: number; du: number; surface?: SurfaceTable };
   }>;
+}
+
+/** Arc lengths over a grid of (height, angle): u around the body, v up the body, both in metres. */
+export interface SurfaceTable { h0: number; dh: number; nb: number; u: Float64Array; v: Float64Array; nh: number }
+
+/** Builds the table from vertex (height, angle from the seam, distance to the axis). */
+export function surfaceTable(samples: Array<[number, number, number]>, cell = 0.02, nb = 120 /* multiple of 4 */): SurfaceTable {
+  let h0 = Infinity, h1 = -Infinity;
+  for (const [h] of samples) (h0 = Math.min(h0, h)), (h1 = Math.max(h1, h));
+  const nh = Math.max(2, Math.ceil((h1 - h0) / cell) + 1);
+  const dh = (h1 - h0) / (nh - 1) || cell;
+  const sum = new Float64Array(nh * nb), cnt = new Float64Array(nh * nb);
+  for (const [h, t, r] of samples) {
+    const i = Math.min(nh - 1, Math.round((h - h0) / dh));
+    const j = Math.floor((t / (2 * Math.PI)) * nb) % nb;
+    sum[i * nb + j] += r;
+    cnt[i * nb + j]++;
+  }
+  // Radius per cell; empty cells are filled around the body, then up and down.
+  const r = new Float64Array(nh * nb).fill(NaN);
+  for (let k = 0; k < r.length; k++) if (cnt[k]) r[k] = sum[k] / cnt[k];
+  for (let i = 0; i < nh; i++) {
+    const row = Array.from(r.subarray(i * nb, (i + 1) * nb));
+    const known = row.map((x, j) => (Number.isNaN(x) ? -1 : j)).filter((j) => j >= 0);
+    if (!known.length) continue;
+    for (let j = 0; j < nb; j++) {
+      if (!Number.isNaN(row[j])) continue;
+      let a = known[known.length - 1] - nb, b = known[0] + nb;
+      for (const k of known) { if (k < j) a = k; else { b = k; break; } }
+      const ra = row[(a + nb) % nb], rb = row[b % nb];
+      r[i * nb + j] = ra + ((rb - ra) * (j - a)) / (b - a);
+    }
+  }
+  for (let j = 0; j < nb; j++) {
+    for (let i = 1; i < nh; i++) if (Number.isNaN(r[i * nb + j])) r[i * nb + j] = r[(i - 1) * nb + j];
+    for (let i = nh - 2; i >= 0; i--) if (Number.isNaN(r[i * nb + j])) r[i * nb + j] = r[(i + 1) * nb + j];
+  }
+  // Smooth (3x3, wrapping around the body) so single vertices do not ripple the picture.
+  for (let pass = 0; pass < 2; pass++) {
+    const src = r.slice();
+    for (let i = 0; i < nh; i++)
+      for (let j = 0; j < nb; j++) {
+        let s = 0, n = 0;
+        for (let di = -1; di <= 1; di++) {
+          const ii = i + di;
+          if (ii < 0 || ii >= nh) continue;
+          for (let dj = -1; dj <= 1; dj++) (s += src[ii * nb + ((j + dj + nb) % nb)]), n++;
+        }
+        r[i * nb + j] = s / n;
+      }
+  }
+  const dt = (2 * Math.PI) / nb;
+  const R = (i: number, j: number) => r[i * nb + (((j % nb) + nb) % nb)];
+  // u: arc length around each height row, at bin edges 0..nb (radius between centres).
+  const arc = new Float64Array(nh * (nb + 1));
+  for (let i = 0; i < nh; i++)
+    for (let j = 0; j < nb; j++) {
+      const ra = (R(i, j - 1) + R(i, j)) / 2, rb = (R(i, j) + R(i, j + 1)) / 2;
+      arc[i * (nb + 1) + j + 1] = arc[i * (nb + 1) + j] + Math.hypot(R(i, j) * dt, rb - ra);
+    }
+  // Rows differ in girth (chest vs waist), so raw arc lengths from the seam drift sideways row by
+  // row and shear the picture. Pin four lines - the quarters around the axis (front, sides, back) -
+  // to straight vertical lines: between them each row keeps its own skin proportions.
+  const Q = 4, qb = nb / Q;
+  const mean = new Array(Q).fill(0);
+  for (let q = 0; q < Q; q++) {
+    for (let i = 0; i < nh; i++) mean[q] += arc[i * (nb + 1) + (q + 1) * qb] - arc[i * (nb + 1) + q * qb];
+    mean[q] /= nh;
+  }
+  const u = new Float64Array(nh * (nb + 1));
+  for (let i = 0; i < nh; i++) {
+    let base = 0;
+    for (let q = 0; q < Q; q++) {
+      const a0 = arc[i * (nb + 1) + q * qb], len = arc[i * (nb + 1) + (q + 1) * qb] - a0 || 1e-9;
+      for (let j = q * qb; j <= (q + 1) * qb; j++) u[i * (nb + 1) + j] = base + ((arc[i * (nb + 1) + j] - a0) * mean[q]) / len;
+      base += mean[q];
+    }
+  }
+  // v: arc length up the body at each angle, measured from the middle row so the columns do not
+  // drift apart (a sloping shoulder gets the extra length it really has, the rest stays level).
+  const v = new Float64Array(nh * nb);
+  const im = Math.floor(nh / 2);
+  for (let j = 0; j < nb; j++) {
+    v[im * nb + j] = h0 + im * dh;
+    for (let i = im + 1; i < nh; i++) v[i * nb + j] = v[(i - 1) * nb + j] + Math.hypot(dh, R(i, j) - R(i - 1, j));
+    for (let i = im - 1; i >= 0; i--) v[i * nb + j] = v[(i + 1) * nb + j] - Math.hypot(dh, R(i + 1, j) - R(i, j));
+  }
+  return { h0, dh, nb, u, v, nh };
+}
+
+/** Canvas (u, v) in metres for height h and angle t (radians from the seam, 0..2pi). */
+export function surfaceUV(s: SurfaceTable, h: number, t: number): [number, number] {
+  const fi = Math.min(s.nh - 1, Math.max(0, (h - s.h0) / s.dh));
+  const i0 = Math.min(s.nh - 2, Math.floor(fi)), wi = fi - i0;
+  const fj = Math.min(s.nb, Math.max(0, (t / (2 * Math.PI)) * s.nb));
+  const j0 = Math.min(s.nb - 1, Math.floor(fj)), wj = fj - j0;
+  const U = (i: number) => s.u[i * (s.nb + 1) + j0] * (1 - wj) + s.u[i * (s.nb + 1) + j0 + 1] * wj;
+  const V = (i: number) => s.v[i * s.nb + j0] * (1 - wj) + s.v[i * s.nb + ((j0 + 1) % s.nb)] * wj;
+  // Past the top/bottom row, continue straight along the axis.
+  const extra = (h - s.h0) / s.dh > s.nh - 1 ? h - (s.h0 + (s.nh - 1) * s.dh) : h < s.h0 ? h - s.h0 : 0;
+  return [U(i0) * (1 - wi) + U(i0 + 1) * wi, V(i0) * (1 - wi) + V(i0 + 1) * wi + extra];
+}
+
+/** Full way round the body at height h (for triangles that cross the seam). */
+export function surfacePerimeter(s: SurfaceTable, h: number): number {
+  return surfaceUV(s, h, 2 * Math.PI)[0];
 }
 
 const GAP = 0.04;
@@ -69,6 +177,7 @@ export function groupedUnwrap(
     const verts = new Map<number, [number, number]>();
     let R = 0;
     const angle = new Map<number, number>();
+    const dist = new Map<number, number>();
     const radii: number[] = [];
     // Polyline axis: each vertex measures height along the polyline and its angle
     // around the nearest segment, with angle 0 = the body's front.
@@ -112,6 +221,7 @@ export function groupedUnwrap(
         const r = sub(p, [best.a[0] + best.d[0] * bt, best.a[1] + best.d[1] * bt, best.a[2] + best.d[2] * bt]);
         angle.set(v, Math.atan2(dot(r, best.e1), dot(r, best.e2)));
         radii.push(bd);
+        dist.set(v, bd);
         verts.set(v, [0, best.start + bt]);
       }
 
@@ -132,6 +242,12 @@ export function groupedUnwrap(
         verts.get(v)![0] = t; // radians for now
       }
     }
+    let table: SurfaceTable | undefined;
+    if (spec.mapping.kind === "cylinder" && spec.mapping.surface && segs.length === 1) {
+      const samples: Array<[number, number, number]> = [];
+      for (const [v, [t, h]] of verts) samples.push([h, t, dist.get(v)!]);
+      table = surfaceTable(samples);
+    }
 
     // Emit this group's vertices; seam-crossing triangles get shifted copies.
     const local = new Map<string, number>();
@@ -144,7 +260,10 @@ export function groupedUnwrap(
         local.set(key, id);
         outSource.push(v);
         const [u, h] = verts.get(v)!;
-        outUV.push(spec.mapping.kind === "cylinder" ? (u + (shift ? 2 * Math.PI : 0)) * R : u, h);
+        if (table) {
+          const [su, sv] = surfaceUV(table, h, u);
+          outUV.push(su + (shift ? surfacePerimeter(table, h) : 0), sv);
+        } else outUV.push(spec.mapping.kind === "cylinder" ? (u + (shift ? 2 * Math.PI : 0)) * R : u, h);
       }
       return id;
     };
@@ -176,7 +295,7 @@ export function groupedUnwrap(
       ? { sx: (spec.mapping.side === "front" ? 1 : -1) * (signed < 0 ? -1 : 1), du: cursor - minU }
       : undefined;
     const cyl = spec.mapping.kind === "cylinder" && segs.length === 1
-      ? { a: segs[0].a, d: segs[0].d, e1: segs[0].e1, e2: segs[0].e2, seam, R, sign: signed < 0 ? -1 : 1, du: cursor - minU }
+      ? { a: segs[0].a, d: segs[0].d, e1: segs[0].e1, e2: segs[0].e2, seam, R, sign: signed < 0 ? -1 : 1, du: cursor - minU, surface: table }
       : undefined;
     groups.push({ label: spec.label, minU: cursor, maxU: cursor + maxU - minU, minV, maxV, map, cyl });
     cursor += maxU - minU + GAP;

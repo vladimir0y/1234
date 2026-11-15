@@ -21,7 +21,10 @@ CANVASES = {
     # Torso around the body axis, cut along the left side: left half = back (seen from behind),
     # right half = chest (seen from the front), middle = right side.
     "wrap_torso": {
-        "file": "wrap_torso.json", "area": (820, 717),
+        # Measured along the skin (editor's surface wrap): one turn = 787 units, 882 tall.
+        # Zones and layouts below are drawn on the earlier angle-based canvas; "design" maps them
+        # here (x' = x + 14, y' = 1.034 y + 52.6: fitted on the skeleton's joints, error < 4 units).
+        "file": "wrap_torso.json", "area": (787, 882), "design": (1.0, 14.0, 1.034, 52.6),
         "label": "Навколо тулуба (спина | бік | груди)",
         "zones": {
             "back": [(60, 0), (340, 0), (340, 717), (60, 717)],
@@ -116,9 +119,16 @@ class Canvas:
     height: int
     scale: float          # pixels per unit
     outline: list         # list of loops, each a list of (x, y) in units
+    design: tuple = (1.0, 0.0, 1.0, 0.0)  # design grid -> canvas units: x*sx+ox, y*sy+oy (zones, layouts)
 
     def px(self, pts):
+        """Canvas units -> pixels (the outline)."""
         return [(x * self.scale, y * self.scale) for x, y in pts]
+
+    def dpx(self, pts):
+        """Design-grid units (zones, layouts) -> pixels."""
+        sx, ox, sy, oy = self.design
+        return [((x * sx + ox) * self.scale, (y * sy + oy) * self.scale) for x, y in pts]
 
 
 def load_canvas(name: str, width: int = 1024) -> Canvas:
@@ -131,7 +141,7 @@ def load_canvas(name: str, width: int = 1024) -> Canvas:
     for seg in info["outline"].split("M")[1:]:
         nums = list(map(float, re.findall(r"-?\d+\.?\d*", seg)))
         loops.append(list(zip(nums[0::2], nums[1::2])))
-    return Canvas(name, width, height, scale, loops)
+    return Canvas(name, width, height, scale, loops, spec.get("design", (1.0, 0.0, 1.0, 0.0)))
 
 
 def body_mask(c: Canvas) -> np.ndarray:
@@ -148,7 +158,7 @@ def zone_mask(c: Canvas, zones: list[str], feather: int = 40, on_body: bool = Tr
     m = Image.new("L", (c.width, c.height), 0)
     d = ImageDraw.Draw(m)
     for z in zones:
-        d.polygon(c.px(CANVASES[c.name]["zones"][z]), fill=255)
+        d.polygon(c.dpx(CANVASES[c.name]["zones"][z]), fill=255)
     if feather > 0:
         m = m.filter(ImageFilter.GaussianBlur(feather / 2))
     a = np.asarray(m, np.float32) / 255
@@ -170,18 +180,18 @@ def layout_guide(c: Canvas, preset: str, background: str = "dark", blur: int = 1
     g = Image.new("RGB", (c.width, c.height), bg)
     d = ImageDraw.Draw(g)
     for (x0, y0, x1, y1), col in L.get("ellipses", []):
-        d.ellipse(c.px([(x0, y0), (x1, y1)]), fill=col)
+        d.ellipse(c.dpx([(x0, y0), (x1, y1)]), fill=col)
     for box, col in L.get("smoke", []):
         _smoke(g, c, box, col)
     for pts, w, col in L.get("paths", [L["path"]] if "path" in L else []):
-        pts = c.px(_spline(pts, 40))
+        pts = c.dpx(_spline(pts, 40))
         # r07: a flat dark band came back as a flat black silhouette -> shade it as a tube
         # (dark edges, lighter middle) so img2img keeps volume and draws scales with highlights
         levels = 7
         for k in range(levels):
             f = 1 - k / levels
             colour = tuple(min(255, int(v + 110 * (k / (levels - 1)) ** 1.4)) for v in col)
-            r = w * f * c.scale / 2
+            r = w * f * c.scale * c.design[0] / 2
             for x, y in pts:  # round stamps: no notches at the bends
                 d.ellipse((x - r, y - r, x + r, y + r), fill=colour)
     for i, (poly, col) in enumerate(L.get("polygons", [])):
@@ -192,9 +202,9 @@ def layout_guide(c: Canvas, preset: str, background: str = "dark", blur: int = 1
             for k in range(6):
                 f = 1 - k / 7
                 colour = tuple(min(255, int(v + 100 * (k / 5) ** 1.4)) for v in col)
-                d.polygon(c.px([(cx + (x - cx) * f, cy + (y - cy) * f) for x, y in poly]), fill=colour)
+                d.polygon(c.dpx([(cx + (x - cx) * f, cy + (y - cy) * f) for x, y in poly]), fill=colour)
         else:
-            d.polygon(c.px(poly), fill=col)
+            d.polygon(c.dpx(poly), fill=col)
     if blur > 0:
         g = g.filter(ImageFilter.GaussianBlur(blur))
     return np.asarray(g, np.float32) / 255
@@ -219,7 +229,7 @@ def _spline(pts, n: int = 12):
 
 def _smoke(g: Image.Image, c: Canvas, box, col, seed: int = 7) -> None:
     """Paints wispy smoke into `box` (units): multi-scale noise, ridged so it forms strands, soft-faded at the edges."""
-    x0, y0, x1, y1 = (int(v * c.scale) for v in box)
+    (x0, y0), (x1, y1) = ((int(x), int(y)) for x, y in c.dpx([box[:2], box[2:]]))
     w, h = max(8, x1 - x0), max(8, y1 - y0)
     rng = np.random.default_rng(seed)
     n = np.zeros((h, w), np.float32)

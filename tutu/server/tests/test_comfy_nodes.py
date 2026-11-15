@@ -13,7 +13,7 @@ spec.loader.exec_module(core)
 
 def test_canvas_sizes():
     c = core.load_canvas("wrap_torso", 1024)
-    assert (c.width, c.height) == (1024, 896)
+    assert (c.width, c.height) == (1024, 1152)          # measured along the skin: 787 x 882 units
     assert core.load_canvas("front_back_body", 1024).height % 64 == 0
 
 
@@ -23,10 +23,11 @@ def test_body_and_zones():
     assert 0.5 < body.mean() < 0.95                      # most of the canvas is skin
     back = core.zone_mask(c, ["back"], 0)
     chest = core.zone_mask(c, ["chest"], 0)
-    assert back[:, : int(60 * c.scale)].max() == 0 and chest[:, : int(440 * c.scale)].max() == 0
+    X = lambda x: int(c.dpx([(x, 0)])[0][0])            # zones are on the design grid
+    assert back[:, : X(60)].max() == 0 and chest[:, : X(440)].max() == 0
     assert (back * chest).max() == 0                     # zones do not overlap
     soft = core.zone_mask(c, ["back"], 40)
-    edge = soft[c.height // 2, int(340 * c.scale) - 20: int(340 * c.scale) + 20]
+    edge = soft[c.height // 2, X(340) - 20: X(340) + 20]
     assert 0 < edge.min() < edge.max() <= 1 and len(np.unique(edge.round(2))) > 5   # soft edge
 
 
