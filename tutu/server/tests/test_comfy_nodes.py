@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+from PIL import Image, ImageDraw
 
 spec = importlib.util.spec_from_file_location("tutu_core", Path(__file__).resolve().parents[2] / "comfy_nodes" / "core.py")
 core = importlib.util.module_from_spec(spec)
@@ -65,3 +66,35 @@ def test_layout_variations():
     other = core.layout_guide(c, "one_dragon_around_torso", "white", 0, variation=8, amount=40)
     assert np.array_equal(a, b) and not np.array_equal(a, base) and not np.array_equal(a, other)
     assert np.array_equal(base, core.layout_guide(c, "one_dragon_around_torso", "white", 0, variation=7, amount=0))
+
+
+def test_armpit_holes_are_not_skin():
+    c = core.load_canvas("wrap_torso", 512)
+    m = core.body_mask(c)
+    assert m[int(200 * c.scale), int(420 * c.scale)] == 0      # right armpit hole
+    assert m[int(60 * c.scale), int(410 * c.scale)] == 1       # shoulder strip above it
+
+
+def test_layout_body_stays_out_of_the_armpits():
+    # the neck/back stroke crosses the shoulder between the top edge and the armpit hole (r21: it ran
+    # through the hole and the tattoo was cut there in a staircase)
+    c = core.load_canvas("wrap_torso", 512)
+    skin = core.body_mask(c)
+    pts, w, _ = core.LAYOUTS["one_dragon_around_torso"]["paths"][0]
+    m = Image.new("L", (c.width, c.height), 0)
+    d = ImageDraw.Draw(m)
+    r = w / 2 * c.scale
+    for x, y in c.dpx(core._spline(pts, 40)):
+        d.ellipse((x - r, y - r, x + r, y + r), fill=255)
+    stroke = np.asarray(m, np.float32) / 255
+    stroke[:, : int(40 * c.scale)] = 0                       # the seam edge is crossed on purpose
+    assert (stroke * (1 - skin)).sum() < 0.01 * stroke.sum()
+
+
+def test_clean_residue_whitens_grey_and_keeps_detail():
+    rng = np.random.default_rng(0)
+    img = np.ones((128, 128, 3), np.float32)
+    img[:, :64] = 0.4                                         # smooth grey haze
+    img[:, 64:] = rng.uniform(0, 1, (128, 64, 1))             # detailed texture
+    out = core.clean_residue(img)
+    assert out[64, 20].mean() > 0.9 and abs(out[64, 110] - img[64, 110]).max() < 0.05

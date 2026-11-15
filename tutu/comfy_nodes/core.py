@@ -38,7 +38,7 @@ CANVASES = {
             "everything": [(0, 0), (820, 0), (820, 717), (0, 717)],
             # head of `one_dragon_around_torso` with its back of the head and jaws, for repainting only
             # the head (r14: masked repaint at denoise 0.65-0.75 removed the classic horns and whiskers)
-            "dragon_head": [(440, 20), (560, 15), (665, 70), (720, 200), (690, 260), (600, 320), (500, 315), (450, 220)],
+            "dragon_head": [(465, 20), (585, 15), (690, 70), (745, 200), (715, 260), (625, 320), (525, 315), (475, 220)],
         },
     },
     "front_back_torso": {
@@ -86,21 +86,22 @@ LAYOUTS = {
         "canvas": "wrap_torso",
         "shade_head": True,
         "ellipses": [((55, 190, 385, 625), (55, 30, 30)),      # hair, ends above the buttocks (r12 on the body)
-                     ((-5, 95, 140, 240), (150, 30, 25)),      # big red moon behind the hair, upper left (r10: dot on the face; r13: still touched the forehead)
+                     ((81, 65, 221, 201), (150, 30, 25)),      # big red moon behind the hair, upper left (r10: dot on the face; r13: still touched the forehead)
                      ((70, 265, 350, 525), (170, 120, 105))],  # face wider than tall on the canvas: the curved back narrows it on the body (c3) (r06: a pale cheek ellipse became a white disc -> removed)
         "smoke": [((60, 540, 380, 670), (110, 45, 40))],       # red smoke at the lower back
         "paths": [
-            # neck: from the head up over the right shoulder (off the top edge -> right arm)
-            ([(510, 270), (475, 190), (455, 110), (440, 30), (430, -40)], 105, (40, 28, 28)),
-            # body across the shoulder blades above the head, then down the left side
-            ([(390, -40), (370, 60), (300, 130), (200, 120), (110, 120), (50, 180), (30, 290), (20, 380), (-60, 440)], 100, (40, 28, 28)),
+            # neck + back in ONE stroke: up from the head, over the right shoulder through the ~10 cm
+            # strip between the top edge and the armpit hole (the old neck ran through the hole and was
+            # cut there), across the shoulder blades above the girl's head, down the left side
+            ([(526, 268), (521, 191), (514, 114), (503, 63), (481, 38), (438, 15), (386, 5), (336, 11), (296, 46), (246, 94), (186, 104), (126, 128), (104, 181), (98, 249), (66, 307), (6, 346), (-64, 384)], 72, (40, 28, 28)),
             # continues on the front from the left side, across the belly, curls up under the head
-            ([(880, 430), (780, 450), (680, 500), (570, 500), (490, 450), (470, 420), (500, 370), (560, 380), (600, 430)], 95, (40, 28, 28)),
+            # (enters at the right edge at the height where the back stroke leaves the left edge)
+            ([(880, 320), (780, 356), (680, 440), (570, 495), (490, 450), (470, 420), (500, 370), (560, 380), (600, 430)], 95, (40, 28, 28)),
             # thin tail from the bottom of the coil (r06: starting at the jaws it read as a tongue)
             ([(690, 505), (720, 580), (715, 650), (690, 717)], 30, (45, 30, 30)),
         ],
-        "polygons": [([(460, 85), (555, 55), (640, 110), (700, 215), (650, 240), (565, 300), (505, 285), (470, 195)], (35, 25, 25)),  # long viper-like wedge on the right pec (r10: a chunky head shape got horns)
-                     ([(585, 205), (655, 185), (625, 265)], (75, 25, 25))],                                                       # open jaws
+        "polygons": [([(485, 85), (580, 55), (665, 110), (725, 215), (675, 240), (590, 300), (530, 285), (495, 195)], (35, 25, 25)),  # long viper-like wedge on the right pec (r10: a chunky head shape got horns)
+                     ([(610, 205), (680, 185), (650, 265)], (75, 25, 25))],                                                       # open jaws
     },
     "face_back_dragon_chest": {
         "canvas": "wrap_torso",
@@ -149,11 +150,13 @@ def load_canvas(name: str, width: int = 1024) -> Canvas:
 
 def body_mask(c: Canvas) -> np.ndarray:
     """1 on the skin of the unwrap, 0 outside (float32 HxW)."""
-    m = Image.new("L", (c.width, c.height), 0)
-    d = ImageDraw.Draw(m)
+    # even-odd: inner loops are holes (the armpits, where the arms are cut off), not skin
+    a = np.zeros((c.height, c.width), bool)
     for lp in c.outline:
-        d.polygon(c.px(lp), fill=255)
-    return np.asarray(m, np.float32) / 255
+        m = Image.new("1", (c.width, c.height), 0)
+        ImageDraw.Draw(m).polygon(c.px(lp), fill=1)
+        a ^= np.asarray(m, bool)
+    return a.astype(np.float32)
 
 
 def zone_mask(c: Canvas, zones: list[str], feather: int = 40, on_body: bool = True) -> np.ndarray:
@@ -185,6 +188,40 @@ def zone_mask(c: Canvas, zones: list[str], feather: int = 40, on_body: bool = Tr
     if on_body:
         a = a * np.asarray(Image.fromarray((body_mask(c) * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(9)), np.float32) / 255
     return a
+
+
+def _box(x: np.ndarray, r: int) -> np.ndarray:
+    for ax in (0, 1):
+        p = np.pad(x, [(r + 1, r) if i == ax else (0, 0) for i in (0, 1)], mode="edge")
+        cs = np.cumsum(p, axis=ax)
+        n = cs.shape[ax]
+        x = (np.take(cs, range(2 * r + 1, n), axis=ax) - np.take(cs, range(0, n - 2 * r - 1), axis=ax)) / (2 * r + 1)
+    return x
+
+
+def _blur(x: np.ndarray, r: int) -> np.ndarray:
+    return _box(_box(x, r), r)
+
+
+def clean_residue(img: np.ndarray) -> np.ndarray:
+    """Whitens smooth, colourless grey haze (leftover guide shading, 'ghost' bodies) while keeping
+    detailed parts (scales, hair) and coloured ones (skin, moon, smoke). img: HxWx3 float 0..1."""
+    L = img.mean(-1)
+    sat = img.max(-1) - img.min(-1)
+    r = max(2, img.shape[1] // 128)
+    std = np.sqrt(np.maximum(_blur(L * L, r) - _blur(L, r) ** 2, 0))
+    res = np.clip((0.08 - std) / 0.03, 0, 1) * np.clip((0.12 - sat) / 0.06, 0, 1) * np.clip((L - 0.2) / 0.08, 0, 1)
+    res = np.clip(_blur(res, r * 2) * 2.5, 0, 1) * np.clip((0.16 - std) / 0.05, 0, 1) * np.clip((0.15 - sat) / 0.05, 0, 1)
+    res = _blur(res, r)
+    return img + (1 - img) * res[..., None]
+
+
+def edge_fade(c: Canvas, inset: float = 14) -> np.ndarray:
+    """Body mask that fades to 0 over `inset` canvas units before every edge (armpits, neck, waist):
+    the region is cut along mesh triangles, so a tattoo running to the edge ends in a staircase."""
+    r = max(1, int(inset * c.scale / 2))
+    m = _blur(body_mask(c), r)
+    return np.clip((m - 0.5) / 0.45, 0, 1)
 
 
 def silhouette(c: Canvas, skin=(224, 196, 172), background=(255, 255, 255)) -> np.ndarray:
@@ -307,5 +344,5 @@ def for_editor(c: Canvas, image: np.ndarray) -> Image.Image:
     """RGBA PNG for the Tutu editor: the image on the body (alpha = body), near-white paper made transparent."""
     img = np.asarray(Image.fromarray((np.clip(image, 0, 1) * 255).astype(np.uint8)).resize((c.width, c.height), Image.LANCZOS), np.float32)
     lum = img.mean(-1)
-    alpha = np.clip((250 - lum) / 22, 0, 1) * body_mask(c)
+    alpha = np.clip((250 - lum) / 22, 0, 1) * edge_fade(c)
     return Image.fromarray(np.dstack([img, alpha * 255]).astype(np.uint8), "RGBA")

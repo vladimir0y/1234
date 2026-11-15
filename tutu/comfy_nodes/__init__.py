@@ -110,6 +110,21 @@ class TutuBodyPreview:
         return (_img(core.body_preview(canvas, _np(image))),)
 
 
+class TutuCleanResidue:
+    """Whitens smooth grey haze the model leaves where the guide had shading but nothing was drawn
+    (the 'ghost' bodies). Keeps scales, hair, skin, moon and coloured smoke. Run before saving."""
+    CATEGORY = "Tutu"
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "run"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {"image": ("IMAGE",)}}
+
+    def run(self, image):
+        return (_img(core.clean_residue(_np(image))),)
+
+
 class TutuSaveForEditor:
     """Saves PNG (transparent off the body) + canvas name to ComfyUI/output/tutu/ for the Tutu editor."""
     CATEGORY = "Tutu"
@@ -139,6 +154,7 @@ NODE_CLASS_MAPPINGS = {
     "TutuLayoutGuide": TutuLayoutGuide,
     "TutuBodyPreview": TutuBodyPreview,
     "TutuSaveForEditor": TutuSaveForEditor,
+    "TutuCleanResidue": TutuCleanResidue,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
     "TutuCanvas": "Tutu: полотно тіла",
@@ -146,4 +162,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "TutuLayoutGuide": "Tutu: розкладка композиції",
     "TutuBodyPreview": "Tutu: перегляд на тілі",
     "TutuSaveForEditor": "Tutu: зберегти для редактора",
+    "TutuCleanResidue": "Tutu: прибрати сірий серпанок",
 }
