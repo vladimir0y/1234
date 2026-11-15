@@ -116,3 +116,15 @@ denoise 0.8 (якщо тіло дракона губиться — 0.7), 3 сі�
 - кожна чернетка: випадкові variation (1..10^6), amount 20–50, сід, denoise 0.82–0.92; час від часу — інший настрій у промпті (світанкове світло, грозове небо, пелюстки, дим замість хмар, сріблясті відблиски);
 - потім голова dragon_head (червоні плавці) і акценти dragon_body — ЛИШЕ для чернеток, що пройшли відбір.
 **Відбір суворий** — пушити тільки ≥ 9/10 за всіма пунктами: 1) одна цілісна композиція, дракон одним тілом обвиває обличчя; 2) обличчя гарне, живе, природних пропорцій, світло; 3) голова дракона сучасна (без рогів/вусів/гриви); 4) стиль тату на папері, чистий білий фон, без печаток і тексту; 5) червоне лише як акцент (місяць, дим, лінії); 6) «вау» — хотілося б набити. Решту не пушити, лише рядок у LOG.
+
+## Власник: «обличчя стильне й сучасне, а дракон — наче з малюнків 1999 року. Потрібні сучасні стилі»
+Чому дракон «старий»: глянцеві 3D-луски з металевими відблисками, аерограф, «рендер» — це естетика 90-х/2000-х фентезі. Обличчя ж — сучасний мікрореалізм.
+Що робити: **перемальовувати лише дракона** (маска `dragon_body` + `dragon_head`, also; feather 20), denoise 0.7–0.8, cfg 1.5, обличчя не чіпати. Для кожної спроби — випадковий сучасний стиль:
+1. **Graphic blackwork** (як змія-референс): "bold graphic blackwork illustration of a serpent dragon, flat solid black areas, crisp single-line scale pattern, ribbed belly plates drawn as clean parallel lines, whip shading, lots of negative space";
+2. **Sumi-e / ink wash**: "dragon painted in loose japanese sumi-e ink brush strokes, the body dissolves into dry-brush strokes and ink splatter, minimal, elegant";
+3. **Fine-line sketch**: "dragon drawn as an unfinished fine-line sketch, thin precise lines, construction lines left visible, a few solid black accents";
+4. **Ornamental dotwork**: "dragon made of ornamental geometric dotwork patterns and sacred-geometry lines, stippled gradients";
+5. **Dark surreal**: "surreal dragon whose body breaks into floating fragments and black smoke, high contrast";
+6. **Chrome / Y2K-free biomech** НЕ брати (теж старе).
+Негатив: "glossy 3d render, metallic shine, airbrush, fantasy art, cgi, plastic, 1990s, horns, whiskers, mane".
+Оцінка: дракон має виглядати як робота сучасного тату-майстра 2024–2026 (Instagram), у тій самій стилістиці, що й обличчя. Пушити тільки «вау».
