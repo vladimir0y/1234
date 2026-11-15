@@ -174,8 +174,13 @@ def layout_guide(c: Canvas, preset: str, background: str = "dark", blur: int = 1
         _smoke(g, c, box, col)
     for pts, w, col in L.get("paths", [L["path"]] if "path" in L else []):
         pts = c.px(_spline(pts, 40))
-        for width, colour in ((w, col), (w * 0.27, tuple(min(255, v + 32) for v in col))):  # body, then belly plates
-            r = width * c.scale / 2
+        # r07: a flat dark band came back as a flat black silhouette -> shade it as a tube
+        # (dark edges, lighter middle) so img2img keeps volume and draws scales with highlights
+        levels = 7
+        for k in range(levels):
+            f = 1 - k / levels
+            colour = tuple(min(255, int(v + 110 * (k / (levels - 1)) ** 1.4)) for v in col)
+            r = w * f * c.scale / 2
             for x, y in pts:  # round stamps: no notches at the bends
                 d.ellipse((x - r, y - r, x + r, y + r), fill=colour)
     for poly, col in L.get("polygons", []):
