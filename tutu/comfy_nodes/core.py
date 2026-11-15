@@ -190,9 +190,33 @@ def silhouette(c: Canvas, skin=(224, 196, 172), background=(255, 255, 255)) -> n
     return (np.array(skin, np.float32) * m + np.array(background, np.float32) * (1 - m)) / 255
 
 
-def layout_guide(c: Canvas, preset: str, background: str = "dark", blur: int = 10) -> np.ndarray:
-    """Colour zones that tell img2img where each element goes (float32 HxWx3, 0..1)."""
-    L = LAYOUTS[preset]
+def vary_layout(L: dict, variation: int, amount: float) -> dict:
+    """A random variant of a layout: every point, ellipse and path bend moves by up to `amount`
+    design units (same `variation` -> same variant), sizes change by up to +-amount/3. 0 = unchanged."""
+    if not variation or amount <= 0:
+        return L
+    rng = np.random.default_rng(variation)
+    j = lambda: float(rng.uniform(-amount, amount))
+    out = dict(L)
+    out["ellipses"] = []
+    for (x0, y0, x1, y1), col in L.get("ellipses", []):
+        dx, dy, g = j(), j(), j() / 3
+        out["ellipses"].append(((x0 + dx - g, y0 + dy - g, x1 + dx + g, y1 + dy + g), col))
+    out["smoke"] = [((x0 + (d := j()), y0, x1 + d, y1), col) for (x0, y0, x1, y1), col in L.get("smoke", [])]
+    paths = L.get("paths", [L["path"]] if "path" in L else [])
+    # ends that leave the canvas (shoulder, seam) stay put so the body still wraps around
+    out["paths"] = [([p if (p[0] < 0 or p[0] > 820 or p[1] < 0) else (p[0] + j(), p[1] + j()) for p in pts], w * (1 + j() / (4 * amount)), col)
+                    for pts, w, col in paths]
+    out.pop("path", None)
+    dx, dy = j() / 2, j() / 2   # the head moves as one piece
+    out["polygons"] = [([(x + dx, y + dy) for x, y in poly], col) for poly, col in L.get("polygons", [])]
+    return out
+
+
+def layout_guide(c: Canvas, preset: str, background: str = "dark", blur: int = 10, variation: int = 0, amount: float = 0) -> np.ndarray:
+    """Colour zones that tell img2img where each element goes (float32 HxWx3, 0..1).
+    `variation` > 0 with `amount` > 0 draws a random variant of the preset (to explore compositions)."""
+    L = vary_layout(LAYOUTS[preset], variation, amount)
     bg = (14, 14, 16) if background == "dark" else (255, 255, 255)
     g = Image.new("RGB", (c.width, c.height), bg)
     d = ImageDraw.Draw(g)

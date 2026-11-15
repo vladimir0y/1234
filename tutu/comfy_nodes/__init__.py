@@ -84,12 +84,16 @@ class TutuLayoutGuide:
             "preset": (list(core.LAYOUTS), {"default": "face_back_dragon_chest"}),
             "background": (["dark", "white"], {"default": "dark"}),
             "blur": ("INT", {"default": 10, "min": 0, "max": 64}),
+        }, "optional": {
+            # random variants of the layout, for exploring compositions: 0 = the preset as drawn
+            "variation": ("INT", {"default": 0, "min": 0, "max": 1_000_000}),
+            "amount": ("INT", {"default": 30, "min": 0, "max": 200}),
         }}
 
-    def run(self, canvas, preset, background, blur):
+    def run(self, canvas, preset, background, blur, variation=0, amount=40):
         if core.LAYOUTS[preset]["canvas"] != canvas.name:
             raise ValueError(f"Layout {preset} is drawn for the {core.LAYOUTS[preset]['canvas']} canvas")
-        return (_img(core.layout_guide(canvas, preset, background, blur)),)
+        return (_img(core.layout_guide(canvas, preset, background, blur, variation, amount)),)
 
 
 class TutuBodyPreview:

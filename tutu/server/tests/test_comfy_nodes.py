@@ -48,3 +48,13 @@ def test_dragon_body_zone_leaves_the_head():
     body = core.zone_mask(c, ["dragon_body"], 0, on_body=False)
     head = core.zone_mask(c, ["dragon_head"], 0, on_body=False)
     assert body.mean() > 0.1 and (body * head).max() == 0
+
+
+def test_layout_variations():
+    c = core.load_canvas("wrap_torso", 256)
+    base = core.layout_guide(c, "one_dragon_around_torso", "white", 0)
+    a = core.layout_guide(c, "one_dragon_around_torso", "white", 0, variation=7, amount=40)
+    b = core.layout_guide(c, "one_dragon_around_torso", "white", 0, variation=7, amount=40)
+    other = core.layout_guide(c, "one_dragon_around_torso", "white", 0, variation=8, amount=40)
+    assert np.array_equal(a, b) and not np.array_equal(a, base) and not np.array_equal(a, other)
+    assert np.array_equal(base, core.layout_guide(c, "one_dragon_around_torso", "white", 0, variation=7, amount=0))
