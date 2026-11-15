@@ -128,3 +128,12 @@ denoise 0.8 (якщо тіло дракона губиться — 0.7), 3 сі�
 6. **Chrome / Y2K-free biomech** НЕ брати (теж старе).
 Негатив: "glossy 3d render, metallic shine, airbrush, fantasy art, cgi, plastic, 1990s, horns, whiskers, mane".
 Оцінка: дракон має виглядати як робота сучасного тату-майстра 2024–2026 (Instagram), у тій самій стилістиці, що й обличчя. Пушити тільки «вау».
+
+## ВИПРАВЛЕННЯ від власника: дракон має бути РЕАЛІСТИЧНИМ (стилі з попереднього розділу — скасовано)
+Не графіка, не суміе, не ескіз, не дотворк. Потрібен сучасний **реалізм** — той самий, що в обличчі (black & grey micro-realism), а не фентезі-рендер 90-х.
+Що робить дракона «старим»: пластиковий глянець, металеві відблиски, однакові луски, «CGI». Що робить сучасним реалізм:
+- справжня шкіра рептилії: матова, як у чорної мамби / варана / крокодила, луски різного розміру, дрібні складки й подряпини;
+- анатомія живої тварини: м'язи шиї, вологе око з відблиском, слина на іклах;
+- м'яке кінематографічне світло зліва вгорі, глибокі тіні, той самий тон і зерно, що в обличчі.
+Промпт для перемальовування дракона (маска dragon_body + dragon_head, denoise 0.7–0.8, cfg 1.5): "black and grey micro-realism tattoo of a living dragon, photorealistic reptile skin like a black mamba and a monitor lizard, matte scales of varied size with fine wrinkles and scars, real muscle under the neck, wet reflective eye, saliva on the fangs, soft cinematic light from the upper left, deep shadows, same fine grain and contrast as the portrait"
+Негатив: "glossy, plastic, metallic, chrome, 3d render, cgi, airbrush, fantasy illustration, cartoon, uniform scales, horns, whiskers, mane, sketch, dotwork, brush strokes".
