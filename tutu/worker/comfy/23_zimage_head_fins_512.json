@@ -102,7 +102,7 @@
                                                        0
                                                    ],
                                   "seed":  1414,
-                                  "steps":  8,
+                                  "steps":  6,
                                   "cfg":  1.5,
                                   "sampler_name":  "res_multistep",
                                   "scheduler":  "simple",
