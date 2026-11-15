@@ -11,7 +11,7 @@ import numpy as np
 
 from . import core
 
-ZONES = ["back", "chest", "right_side", "left_side", "lower_back", "belly", "front", "dragon_area", "everything"]
+ZONES = ["back", "chest", "right_side", "left_side", "lower_back", "belly", "front", "dragon_area", "dragon_head", "everything"]
 
 
 def _img(a: np.ndarray):

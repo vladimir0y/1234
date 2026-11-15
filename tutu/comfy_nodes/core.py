@@ -36,6 +36,9 @@ CANVASES = {
             # where the dragon goes in the owner's composition: chest, belly, right side, lower back
             "dragon_area": [(345, 0), (820, 0), (820, 717), (0, 717), (0, 600), (345, 600)],
             "everything": [(0, 0), (820, 0), (820, 717), (0, 717)],
+            # head of `one_dragon_around_torso` with its back of the head and jaws, for repainting only
+            # the head (r14: masked repaint at denoise 0.65-0.75 removed the classic horns and whiskers)
+            "dragon_head": [(440, 20), (560, 15), (665, 70), (720, 200), (690, 260), (600, 320), (500, 315), (450, 220)],
         },
     },
     "front_back_torso": {
