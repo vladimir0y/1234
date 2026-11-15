@@ -82,10 +82,10 @@ LAYOUTS = {
     "one_dragon_around_torso": {
         "canvas": "wrap_torso",
         "shade_head": True,
-        "ellipses": [((55, 190, 385, 690), (55, 30, 30)),      # hair, under the dragon's back arc
-                     ((15, 150, 175, 310), (150, 30, 25)),     # big red moon behind the hair, upper left (r10: a small one became a red dot on the face)
+        "ellipses": [((55, 190, 385, 625), (55, 30, 30)),      # hair, ends above the buttocks (r12 on the body)
+                     ((-5, 95, 140, 240), (150, 30, 25)),      # big red moon behind the hair, upper left (r10: dot on the face; r13: still touched the forehead)
                      ((70, 265, 350, 525), (170, 120, 105))],  # face wider than tall on the canvas: the curved back narrows it on the body (c3) (r06: a pale cheek ellipse became a white disc -> removed)
-        "smoke": [((60, 590, 380, 717), (110, 45, 40))],       # red smoke at the lower back
+        "smoke": [((60, 540, 380, 670), (110, 45, 40))],       # red smoke at the lower back
         "paths": [
             # neck: from the head up over the right shoulder (off the top edge -> right arm)
             ([(510, 270), (475, 190), (455, 110), (440, 30), (430, -40)], 105, (40, 28, 28)),
