@@ -173,6 +173,9 @@ def zone_mask(c: Canvas, zones: list[str], feather: int = 40, on_body: bool = Tr
             for x, y in c.dpx(_spline(pts, 40)):
                 d.ellipse((x - r, y - r, x + r, y + r), fill=255)
         d.polygon(c.dpx(CANVASES[c.name]["zones"]["dragon_head"]), fill=0)
+        # r19: the body passes over the moon, and the accent pass repainted it -> keep the moon out too
+        (x0, y0, x1, y1), _ = L["ellipses"][1]
+        d.ellipse(c.dpx([(x0, y0), (x1, y1)]), fill=0)
     if feather > 0:
         m = m.filter(ImageFilter.GaussianBlur(feather / 2))
     a = np.asarray(m, np.float32) / 255
