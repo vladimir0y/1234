@@ -27,3 +27,12 @@
 3. Обличчя трохи витягнуте вертикально — зроби зону обличчя ширшою/нижчою (≈ 90–330 по x, 170–600 по y).
 4. Груди: голова добра, але немає тіла дракона. Шия має бути товстою, лускатою, червоні плавці, іти вгору через праве плече (верхній край на x≈380–470) — як у референсі.
 5. Стиль: менше «фото», більше тату — "tattoo ink on skin, fine linework, stippling, black and grey realism tattoo".
+
+## Від власника після раунду 4: дракон НЕ класичний (діє з r06, якщо r05 вже йде — з наступного)
+Дракон зараз старомодний (класичний китайський/японський: роги, шипи-гребені, «вуса», ікла як у традиційного тату). Потрібне **модерне переосмислення дракона**:
+- гладка обтічна голова, як з полірованого чорного обсидіану / рідкого чорнила; кілька різких графічних площин замість дрібних шипів;
+- тіло-шия перетікає в чорнильний дим і тонкі графічні лінії (fine-line, геометричні акценти, мінімалізм); червоне — як тонкі світні лінії/розколи всередині, а не плавці;
+- без рогів, без гриви, без вусів, без гребенів, без «хмарок» традиційного стилю.
+Промпт для дракона (замінити частину про дракона): "on the right a modern reinterpretation of a dragon: sleek smooth obsidian black dragon head with sharp minimal geometric planes, open jaws facing the centre, its long neck dissolves into flowing black ink smoke and fine-line graphic strokes with thin glowing crimson cracks, rising up over the shoulder to the top edge; contemporary surreal fine-line tattoo style"
+Негатив (якщо cfg>1) / уникати у промпті: "traditional chinese dragon, japanese irezumi dragon, horns, whiskers, mane, spiky crest, fins, cartoon".
+Решту (обличчя, місяць, дим, пресет) не змінювати. Пробуй 3 сіди.
