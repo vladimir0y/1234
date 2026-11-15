@@ -53,3 +53,14 @@ BEST (нова ціль, поки що): r05_seed505.png
 - «deep solid blacks» перетворило дракона на пласкі силуети (606, 707) → замінено на «crisp fine linework, every scale drawn with grey highlights».
 - Обличчя — фото → рядок із FEEDBACK «face rendered as a black and grey tattoo on skin, soft stippled shading, hair strands fading into the skin, no dark background».
 - Шипи/грива на голові → голова в пресеті вища й менша (правка Tutu), опис «black viper, obsidian» лишився.
+## Раунд 8 (підкладка r07_guide_nodes.png від Tutu, схема 14)
+| Раунд | Файл | denoise | seed | Час | Оцінка |
+|---|---|---|---|---|---|
+| 8 | r08_seed707.png | 0.8 | 707 | 379 с | ✅ тіло суцільне, луска читається, хвіст з кільця, без плям. ⚠️ вуса й шипи, дракон пласкою векторною графікою, обличчя — фото. 7/10 |
+| 8 | r08_seed505.png | 0.8 | 505 | 512 с | ✅ тіло з великими пластинами. ⚠️ дві червоні плями біля голови (дублі місяця), голова-силует із рогами. 6/10 |
+| 8 | r08_seed808.png (не пушено) | 0.8 | 808 | 355 с | ⚠️ чорний диск позаду голови (полігон голови з підкладки). 5.5/10 |
+
+Проблема → що змінено:
+- Векторні пласкі заливки → (а) у r09 підкладка з об'ємним тілом-трубою (правка Tutu); (б) у r10 «bold graphic blackwork scales» → «realistic three-dimensional scales with soft grey shading», denoise 0.8 → 0.88, щоб модель сильніше перемальовувала пласкі зони підкладки.
+- Обличчя — фото: рядок «face rendered as tattoo on skin» при cfg 1 майже не діє. У r10 промпт починається з «realistic black and grey tattoo on skin», а не з опису сцени.
+- Червоні плями-дублі місяця (505) → у r10 «a single small red moon».
