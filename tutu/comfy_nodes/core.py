@@ -80,7 +80,7 @@ LAYOUTS = {
         "canvas": "wrap_torso",
         "shade_head": True,
         "ellipses": [((55, 190, 385, 690), (55, 30, 30)),      # hair, under the dragon's back arc
-                     ((35, 175, 125, 265), (150, 30, 25)),     # red moon, upper left beside the hair
+                     ((15, 150, 175, 310), (150, 30, 25)),     # big red moon behind the hair, upper left (r10: a small one became a red dot on the face)
                      ((70, 265, 350, 525), (170, 120, 105))],  # face wider than tall on the canvas: the curved back narrows it on the body (c3) (r06: a pale cheek ellipse became a white disc -> removed)
         "smoke": [((60, 590, 380, 717), (110, 45, 40))],       # red smoke at the lower back
         "paths": [
@@ -93,7 +93,7 @@ LAYOUTS = {
             # thin tail from the bottom of the coil (r06: starting at the jaws it read as a tongue)
             ([(690, 505), (720, 580), (715, 650), (690, 717)], 30, (45, 30, 30)),
         ],
-        "polygons": [([(455, 75), (545, 50), (645, 100), (680, 190), (630, 255), (565, 305), (510, 290), (470, 200)], (35, 25, 25)),  # head on the right pec (r06 too low, c3 too high on the shoulder)
+        "polygons": [([(460, 85), (555, 55), (640, 110), (700, 215), (650, 240), (565, 300), (505, 285), (470, 195)], (35, 25, 25)),  # long viper-like wedge on the right pec (r10: a chunky head shape got horns)
                      ([(585, 205), (655, 185), (625, 265)], (75, 25, 25))],                                                       # open jaws
     },
     "face_back_dragon_chest": {
