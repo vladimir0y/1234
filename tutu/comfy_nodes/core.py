@@ -78,6 +78,7 @@ LAYOUTS = {
     # leaves at x<0 and comes back at x>820.
     "one_dragon_around_torso": {
         "canvas": "wrap_torso",
+        "shade_head": True,
         "ellipses": [((70, 190, 370, 690), (55, 30, 30)),      # hair, under the dragon's back arc
                      ((35, 175, 125, 265), (150, 30, 25)),     # red moon, upper left beside the hair
                      ((95, 255, 335, 545), (170, 120, 105))],  # face (r06: a pale cheek ellipse became a white disc -> removed)
@@ -88,7 +89,7 @@ LAYOUTS = {
             # body across the shoulder blades above the head, then down the left side
             ([(390, -40), (370, 60), (300, 130), (200, 120), (110, 120), (50, 180), (30, 290), (20, 380), (-60, 440)], 100, (40, 28, 28)),
             # continues on the front from the left side, across the belly, curls up under the head
-            ([(880, 430), (780, 450), (680, 500), (570, 500), (490, 450), (480, 370), (530, 320), (600, 345)], 95, (40, 28, 28)),
+            ([(880, 430), (780, 450), (680, 500), (570, 500), (490, 450), (470, 380), (500, 320), (560, 330), (600, 390)], 95, (40, 28, 28)),
             # thin tail from the bottom of the coil (r06: starting at the jaws it read as a tongue)
             ([(690, 505), (720, 580), (715, 650), (690, 717)], 30, (45, 30, 30)),
         ],
@@ -183,8 +184,17 @@ def layout_guide(c: Canvas, preset: str, background: str = "dark", blur: int = 1
             r = w * f * c.scale / 2
             for x, y in pts:  # round stamps: no notches at the bends
                 d.ellipse((x - r, y - r, x + r, y + r), fill=colour)
-    for poly, col in L.get("polygons", []):
-        d.polygon(c.px(poly), fill=col)
+    for i, (poly, col) in enumerate(L.get("polygons", [])):
+        if i == 0 and L.get("shade_head"):
+            # r07-r08: a flat dark polygon came back as a black disc / a second blob behind the head ->
+            # shade it like the body (lighter towards the middle) so it reads as a solid head
+            cx = sum(x for x, _ in poly) / len(poly); cy = sum(y for _, y in poly) / len(poly)
+            for k in range(6):
+                f = 1 - k / 7
+                colour = tuple(min(255, int(v + 100 * (k / 5) ** 1.4)) for v in col)
+                d.polygon(c.px([(cx + (x - cx) * f, cy + (y - cy) * f) for x, y in poly]), fill=colour)
+        else:
+            d.polygon(c.px(poly), fill=col)
     if blur > 0:
         g = g.filter(ImageFilter.GaussianBlur(blur))
     return np.asarray(g, np.float32) / 255
