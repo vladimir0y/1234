@@ -1,0 +1,195 @@
+{
+    "unet":  {
+                 "class_type":  "UNETLoader",
+                 "inputs":  {
+                                "unet_name":  "z_image_turbo_bf16.safetensors",
+                                "weight_dtype":  "fp8_e4m3fn"
+                            }
+             },
+    "clip":  {
+                 "class_type":  "CLIPLoader",
+                 "inputs":  {
+                                "clip_name":  "qwen_3_4b.safetensors",
+                                "type":  "lumina2",
+                                "device":  "default"
+                            }
+             },
+    "vae":  {
+                "class_type":  "VAELoader",
+                "inputs":  {
+                               "vae_name":  "ae.safetensors"
+                           }
+            },
+    "shift":  {
+                  "class_type":  "ModelSamplingAuraFlow",
+                  "inputs":  {
+                                 "model":  [
+                                               "unet",
+                                               0
+                                           ],
+                                 "shift":  3.0
+                             }
+              },
+    "base":  {
+                 "class_type":  "LoadImage",
+                 "inputs":  {
+                                "image":  "tutu_restyle_base.png"
+                            }
+             },
+    "enc":  {
+                "class_type":  "VAEEncode",
+                "inputs":  {
+                               "pixels":  [
+                                              "base_small",
+                                              0
+                                          ],
+                               "vae":  [
+                                           "vae",
+                                           0
+                                       ]
+                           }
+            },
+    "masked":  {
+                   "class_type":  "SetLatentNoiseMask",
+                   "inputs":  {
+                                  "samples":  [
+                                                  "enc",
+                                                  0
+                                              ],
+                                  "mask":  [
+                                               "mask_all",
+                                               0
+                                           ]
+                              }
+               },
+    "pos":  {
+                "class_type":  "CLIPTextEncode",
+                "inputs":  {
+                               "clip":  [
+                                            "clip",
+                                            0
+                                        ],
+                               "text":  "black and grey micro-realism tattoo of a living dragon, photorealistic reptile skin like a black mamba and a monitor lizard, matte scales of varied size with fine wrinkles and scars, real muscle under the neck, wet reflective eye, saliva on the fangs, soft cinematic light from the upper left, deep shadows, same fine grain and contrast as the portrait, sleek viper-like hornless head with open jaws, the serpent body wraps around the design, thin deep crimson accents"
+                           }
+            },
+    "negt":  {
+                 "class_type":  "CLIPTextEncode",
+                 "inputs":  {
+                                "clip":  [
+                                             "clip",
+                                             0
+                                         ],
+                                "text":  "glossy, plastic, metallic, chrome, 3d render, cgi, airbrush, fantasy illustration, cartoon, uniform scales, horns, whiskers, mane, sketch, dotwork, brush strokes, text, watermark"
+                            }
+             },
+    "sample":  {
+                   "class_type":  "KSampler",
+                   "inputs":  {
+                                  "model":  [
+                                                "shift",
+                                                0
+                                            ],
+                                  "positive":  [
+                                                   "pos",
+                                                   0
+                                               ],
+                                  "negative":  [
+                                                   "negt",
+                                                   0
+                                               ],
+                                  "latent_image":  [
+                                                       "masked",
+                                                       0
+                                                   ],
+                                  "seed":  1414,
+                                  "steps":  6,
+                                  "cfg":  1.5,
+                                  "sampler_name":  "res_multistep",
+                                  "scheduler":  "simple",
+                                  "denoise":  0.75
+                              }
+               },
+    "decode":  {
+                   "class_type":  "VAEDecode",
+                   "inputs":  {
+                                  "samples":  [
+                                                  "sample",
+                                                  0
+                                              ],
+                                  "vae":  [
+                                              "vae",
+                                              0
+                                          ]
+                              }
+               },
+    "save":  {
+                 "class_type":  "SaveImage",
+                 "inputs":  {
+                                "images":  [
+                                               "decode",
+                                               0
+                                           ],
+                                "filename_prefix":  "realdragon"
+                            }
+             },
+    "canvas":  {
+                   "class_type":  "TutuCanvas",
+                   "inputs":  {
+                                  "canvas":  "wrap_torso",
+                                  "width":  512
+                              }
+               },
+    "mask":  {
+                 "class_type":  "TutuZoneMask",
+                 "inputs":  {
+                                "canvas":  [
+                                               "canvas",
+                                               0
+                                           ],
+                                "zone":  "dragon_body",
+                                "feather":  20,
+                                "invert":  false
+                            }
+             },
+    "base_small":  {
+                       "class_type":  "ImageScale",
+                       "inputs":  {
+                                      "image":  [
+                                                    "base",
+                                                    0
+                                                ],
+                                      "upscale_method":  "lanczos",
+                                      "width":  512,
+                                      "height":  576,
+                                      "crop":  "disabled"
+                                  }
+                   },
+    "mask_head":  {
+                      "class_type":  "TutuZoneMask",
+                      "inputs":  {
+                                     "canvas":  [
+                                                    "canvas",
+                                                    0
+                                                ],
+                                     "zone":  "dragon_head",
+                                     "feather":  20,
+                                     "invert":  false
+                                 }
+                  },
+    "mask_all":  {
+                     "class_type":  "MaskComposite",
+                     "inputs":  {
+                                    "destination":  [
+                                                        "mask",
+                                                        0
+                                                    ],
+                                    "source":  [
+                                                   "mask_head",
+                                                   0
+                                               ],
+                                    "x":  0,
+                                    "y":  0,
+                                    "operation":  "add"
+                                }
+                 }
+}

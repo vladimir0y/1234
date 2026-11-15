@@ -1,0 +1,137 @@
+{
+    "unet":  {
+                 "class_type":  "UNETLoader",
+                 "inputs":  {
+                                "unet_name":  "z_image_turbo_bf16.safetensors",
+                                "weight_dtype":  "fp8_e4m3fn"
+                            }
+             },
+    "clip":  {
+                 "class_type":  "CLIPLoader",
+                 "inputs":  {
+                                "clip_name":  "qwen_3_4b.safetensors",
+                                "type":  "lumina2",
+                                "device":  "default"
+                            }
+             },
+    "vae":  {
+                "class_type":  "VAELoader",
+                "inputs":  {
+                               "vae_name":  "ae.safetensors"
+                           }
+            },
+    "shift":  {
+                  "class_type":  "ModelSamplingAuraFlow",
+                  "inputs":  {
+                                 "model":  [
+                                               "unet",
+                                               0
+                                           ],
+                                 "shift":  3.0
+                             }
+              },
+    "canvas":  {
+                   "class_type":  "TutuCanvas",
+                   "inputs":  {
+                                  "canvas":  "wrap_torso",
+                                  "width":  512
+                              }
+               },
+    "guide":  {
+                  "class_type":  "TutuLayoutGuide",
+                  "inputs":  {
+                                 "canvas":  [
+                                                "canvas",
+                                                0
+                                            ],
+                                 "preset":  "one_dragon_around_torso",
+                                 "background":  "white",
+                                 "blur":  4,
+                                 "variation":  1,
+                                 "amount":  30
+                             }
+              },
+    "enc":  {
+                "class_type":  "VAEEncode",
+                "inputs":  {
+                               "pixels":  [
+                                              "guide",
+                                              0
+                                          ],
+                               "vae":  [
+                                           "vae",
+                                           0
+                                       ]
+                           }
+            },
+    "pos":  {
+                "class_type":  "CLIPTextEncode",
+                "inputs":  {
+                               "clip":  [
+                                            "clip",
+                                            0
+                                        ],
+                               "text":  "realistic black and grey tattoo design with deep crimson accents, isolated on plain white paper background, crisp fine linework, soft stippled shading; one single long modern dragon with a serpent-like body, realistic three-dimensional scales with soft grey shading and ribbed belly plates, wraps around the whole design: its head on the right is smooth and sleek like a black viper, polished obsidian with a few sharp geometric planes, open jaws with long fangs, the thick neck rises to the top edge, the long body arcs across the top above the woman\u0027s head, runs down the left edge and returns along the bottom right, coiling under the head, ending in a thin tail that hangs down from the coil; in the left half a large face of a beautiful young asian woman framed by the dragon\u0027s body, messy dark hair, half-open pale eyes, parted lips, freckles, the woman\u0027s face rendered as a black and grey tattoo on skin, soft stippled shading, hair strands fading into the skin, no dark background behind her, a large red moon behind her hair on the upper left, partly hidden by her hair, not on her face, wisps of red smoke below; contemporary minimalist blackwork tattoo"
+                           }
+            },
+    "negt":  {
+                 "class_type":  "CLIPTextEncode",
+                 "inputs":  {
+                                "clip":  [
+                                             "clip",
+                                             0
+                                         ],
+                                "text":  "horns, antlers, whiskers, mane, spikes on the head, skin, arm, shoulder, body, photo of a tattoo, seal, stamp, signature, text, watermark, cartoon, orange"
+                            }
+             },
+    "sample":  {
+                   "class_type":  "KSampler",
+                   "inputs":  {
+                                  "model":  [
+                                                "shift",
+                                                0
+                                            ],
+                                  "positive":  [
+                                                   "pos",
+                                                   0
+                                               ],
+                                  "negative":  [
+                                                   "negt",
+                                                   0
+                                               ],
+                                  "latent_image":  [
+                                                       "enc",
+                                                       0
+                                                   ],
+                                  "seed":  101,
+                                  "steps":  6,
+                                  "cfg":  1,
+                                  "sampler_name":  "res_multistep",
+                                  "scheduler":  "simple",
+                                  "denoise":  0.88
+                              }
+               },
+    "decode":  {
+                   "class_type":  "VAEDecode",
+                   "inputs":  {
+                                  "samples":  [
+                                                  "sample",
+                                                  0
+                                              ],
+                                  "vae":  [
+                                              "vae",
+                                              0
+                                          ]
+                              }
+               },
+    "save":  {
+                 "class_type":  "SaveImage",
+                 "inputs":  {
+                                "images":  [
+                                               "decode",
+                                               0
+                                           ],
+                                "filename_prefix":  "explore"
+                            }
+             }
+}
