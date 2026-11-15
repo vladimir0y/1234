@@ -36,3 +36,12 @@
 Промпт для дракона (замінити частину про дракона): "on the right a modern reinterpretation of a dragon: sleek smooth obsidian black dragon head with sharp minimal geometric planes, open jaws facing the centre, its long neck dissolves into flowing black ink smoke and fine-line graphic strokes with thin glowing crimson cracks, rising up over the shoulder to the top edge; contemporary surreal fine-line tattoo style"
 Негатив (якщо cfg>1) / уникати у промпті: "traditional chinese dragon, japanese irezumi dragon, horns, whiskers, mane, spiky crest, fins, cartoon".
 Решту (обличчя, місяць, дим, пресет) не змінювати. Пробуй 3 сіди.
+
+## Аналіз раунду 5 → зміни в нодах (git pull, скопіюй core.py у custom_nodes\tutu)
+| Проблема в r05 | Причина | Зміна |
+|---|---|---|
+| Місяць на чолі | моя зона місяця (60–200, 160–300) перекривала зону обличчя | місяць тепер (35–150, 55–170): визирає над головою ліворуч |
+| Хмари-«пампушки» внизу | суцільний червоний еліпс у підкладці → модель малює круглі хмари | новий тип зони `smoke`: шумова текстура з пасмами (червона внизу спини, сіра на правому боці між спиною і грудьми) |
+| Червона куля біля пащі | яскраво-червоний трикутник пащі | паща темніша (75,25,25) і менша |
+| Шия дракона тонка/обривається | короткий шлях | шлях довший (від низу голови 500,300 угору через плече), товщина 110 |
+Для r06: blur підкладки **4** (замість 10), щоб пасма диму лишились; denoise 0.8. Дракон — модерний (розділ вище).

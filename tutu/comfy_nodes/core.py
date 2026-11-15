@@ -59,14 +59,17 @@ LAYOUTS = {
     # and clouds; the dragon's head on the right pec, its body going up over the right shoulder.
     "reference_red_back_dragon_chest": {
         "canvas": "wrap_torso",
+        # r05: the moon at (60..200, 160..300) landed on the forehead -> now upper left, outside the face
         "ellipses": [((10, 80, 390, 717), (55, 30, 30)),       # dark hair mass, whole back
-                     ((60, 160, 200, 300), (150, 30, 25)),     # red moon, upper left of the back
+                     ((35, 55, 150, 170), (150, 30, 25)),      # red moon, peeks out above-left of the head
                      ((90, 170, 330, 600), (170, 120, 105)),   # face, centred on the spine (x~200)
-                     ((95, 170, 210, 420), (200, 150, 130)),   # light on the cheek
-                     ((0, 560, 400, 760), (120, 40, 35))],     # red clouds, lower back
+                     ((95, 170, 210, 420), (200, 150, 130))],  # light on the cheek
+        # r03-r05: a solid red ellipse turned into cartoon cloud puffs -> noise texture reads as real smoke
+        "smoke": [((0, 540, 400, 717), (110, 45, 40)),         # red smoke rising from the lower back
+                  ((340, 380, 470, 600), (90, 80, 80))],       # grey smoke on the right side linking back and chest
         "polygons": [([(440, 70), (520, 40), (620, 90), (650, 170), (600, 230), (545, 300), (500, 290), (470, 200)], (35, 25, 25)),  # head on the right pec
-                     ([(545, 200), (640, 175), (600, 290)], (130, 30, 30))],                                                      # open jaws
-        "path": ([(480, 140), (455, 80), (430, 30), (410, 0)], 95, (40, 28, 28)),                                                  # neck up over the right shoulder
+                     ([(560, 205), (630, 185), (600, 265)], (75, 25, 25))],                                                       # open jaws (darker: r05 drew a red blob here)
+        "path": ([(500, 300), (470, 200), (455, 110), (430, 40), (410, 0)], 110, (40, 28, 28)),                                   # thick neck up over the right shoulder
     },
     "face_back_dragon_chest": {
         "canvas": "wrap_torso",
@@ -143,6 +146,8 @@ def layout_guide(c: Canvas, preset: str, background: str = "dark", blur: int = 1
     d = ImageDraw.Draw(g)
     for (x0, y0, x1, y1), col in L.get("ellipses", []):
         d.ellipse(c.px([(x0, y0), (x1, y1)]), fill=col)
+    for box, col in L.get("smoke", []):
+        _smoke(g, c, box, col)
     pts, w, col = L["path"]
     d.line(c.px(pts), fill=col, width=int(w * c.scale), joint="curve")
     d.line(c.px(pts), fill=tuple(min(255, v + 32) for v in col), width=int(w * c.scale * 0.27), joint="curve")
@@ -151,6 +156,27 @@ def layout_guide(c: Canvas, preset: str, background: str = "dark", blur: int = 1
     if blur > 0:
         g = g.filter(ImageFilter.GaussianBlur(blur))
     return np.asarray(g, np.float32) / 255
+
+
+def _smoke(g: Image.Image, c: Canvas, box, col, seed: int = 7) -> None:
+    """Paints wispy smoke into `box` (units): multi-scale noise, ridged so it forms strands, soft-faded at the edges."""
+    x0, y0, x1, y1 = (int(v * c.scale) for v in box)
+    w, h = max(8, x1 - x0), max(8, y1 - y0)
+    rng = np.random.default_rng(seed)
+    n = np.zeros((h, w), np.float32)
+    for k, amp in ((4, 1.0), (9, 0.5), (20, 0.25), (44, 0.12)):
+        small = rng.random((k, max(2, int(k * w / h)))).astype(np.float32)
+        n += amp * np.asarray(Image.fromarray((small * 255).astype(np.uint8)).resize((w, h), Image.BICUBIC), np.float32) / 255
+    n /= 1.87
+    n = 1 - np.abs(n - 0.5) * 2               # ridges -> strands of smoke
+    n = np.clip((n - 0.3) / 0.5, 0, 1)
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    d = ((xx - w / 2) / (w / 2)) ** 2 + ((yy - h / 2) / (h / 2)) ** 2
+    fade = np.clip((1 - d) / 0.6, 0, 1)                # elliptical, no box edges
+    a = (n * fade)[..., None]
+    region = np.asarray(g.crop((x0, y0, x0 + w, y0 + h)), np.float32)
+    out = region * (1 - a) + np.array(col, np.float32) * a
+    g.paste(Image.fromarray(out.clip(0, 255).astype(np.uint8)), (x0, y0))
 
 
 def body_preview(c: Canvas, image: np.ndarray, skin=(224, 196, 172)) -> np.ndarray:
