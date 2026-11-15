@@ -1,0 +1,167 @@
+{
+    "unet":  {
+                 "class_type":  "UNETLoader",
+                 "inputs":  {
+                                "unet_name":  "z_image_turbo_bf16.safetensors",
+                                "weight_dtype":  "fp8_e4m3fn"
+                            }
+             },
+    "clip":  {
+                 "class_type":  "CLIPLoader",
+                 "inputs":  {
+                                "clip_name":  "qwen_3_4b.safetensors",
+                                "type":  "lumina2",
+                                "device":  "default"
+                            }
+             },
+    "vae":  {
+                "class_type":  "VAELoader",
+                "inputs":  {
+                               "vae_name":  "ae.safetensors"
+                           }
+            },
+    "shift":  {
+                  "class_type":  "ModelSamplingAuraFlow",
+                  "inputs":  {
+                                 "model":  [
+                                               "unet",
+                                               0
+                                           ],
+                                 "shift":  3.0
+                             }
+              },
+    "base":  {
+                 "class_type":  "LoadImage",
+                 "inputs":  {
+                                "image":  "tutu_r16_base.png"
+                            }
+             },
+    "enc":  {
+                "class_type":  "VAEEncode",
+                "inputs":  {
+                               "pixels":  [
+                                              "base_small",
+                                              0
+                                          ],
+                               "vae":  [
+                                           "vae",
+                                           0
+                                       ]
+                           }
+            },
+    "masked":  {
+                   "class_type":  "SetLatentNoiseMask",
+                   "inputs":  {
+                                  "samples":  [
+                                                  "enc",
+                                                  0
+                                              ],
+                                  "mask":  [
+                                               "mask",
+                                               0
+                                           ]
+                              }
+               },
+    "pos":  {
+                "class_type":  "CLIPTextEncode",
+                "inputs":  {
+                               "clip":  [
+                                            "clip",
+                                            0
+                                        ],
+                               "text":  "realistic black and grey tattoo design on white paper: sleek modern dragon head like a black viper with a few thin swept-back crimson fins along the jaw, polished obsidian scales with soft grey highlights, open jaws with long fangs, continuous with the same scaly neck"
+                           }
+            },
+    "negt":  {
+                 "class_type":  "CLIPTextEncode",
+                 "inputs":  {
+                                "clip":  [
+                                             "clip",
+                                             0
+                                         ],
+                                "text":  "horns, antlers, whiskers, mane, spikes on the head, crest, beard, traditional chinese dragon, cartoon"
+                            }
+             },
+    "sample":  {
+                   "class_type":  "KSampler",
+                   "inputs":  {
+                                  "model":  [
+                                                "shift",
+                                                0
+                                            ],
+                                  "positive":  [
+                                                   "pos",
+                                                   0
+                                               ],
+                                  "negative":  [
+                                                   "negt",
+                                                   0
+                                               ],
+                                  "latent_image":  [
+                                                       "masked",
+                                                       0
+                                                   ],
+                                  "seed":  1414,
+                                  "steps":  8,
+                                  "cfg":  1.5,
+                                  "sampler_name":  "res_multistep",
+                                  "scheduler":  "simple",
+                                  "denoise":  0.75
+                              }
+               },
+    "decode":  {
+                   "class_type":  "VAEDecode",
+                   "inputs":  {
+                                  "samples":  [
+                                                  "sample",
+                                                  0
+                                              ],
+                                  "vae":  [
+                                              "vae",
+                                              0
+                                          ]
+                              }
+               },
+    "save":  {
+                 "class_type":  "SaveImage",
+                 "inputs":  {
+                                "images":  [
+                                               "decode",
+                                               0
+                                           ],
+                                "filename_prefix":  "r17"
+                            }
+             },
+    "canvas":  {
+                   "class_type":  "TutuCanvas",
+                   "inputs":  {
+                                  "canvas":  "wrap_torso",
+                                  "width":  512
+                              }
+               },
+    "mask":  {
+                 "class_type":  "TutuZoneMask",
+                 "inputs":  {
+                                "canvas":  [
+                                               "canvas",
+                                               0
+                                           ],
+                                "zone":  "dragon_head",
+                                "feather":  25,
+                                "invert":  false
+                            }
+             },
+    "base_small":  {
+                       "class_type":  "ImageScale",
+                       "inputs":  {
+                                      "image":  [
+                                                    "base",
+                                                    0
+                                                ],
+                                      "upscale_method":  "lanczos",
+                                      "width":  512,
+                                      "height":  576,
+                                      "crop":  "disabled"
+                                  }
+                   }
+}
