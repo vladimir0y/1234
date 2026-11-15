@@ -80,21 +80,20 @@ LAYOUTS = {
         "canvas": "wrap_torso",
         "ellipses": [((70, 190, 370, 690), (55, 30, 30)),      # hair, under the dragon's back arc
                      ((35, 175, 125, 265), (150, 30, 25)),     # red moon, upper left beside the hair
-                     ((95, 255, 335, 545), (170, 120, 105)),   # face, centred on the spine
-                     ((100, 255, 215, 430), (200, 150, 130))], # light on the cheek
+                     ((95, 255, 335, 545), (170, 120, 105))],  # face (r06: a pale cheek ellipse became a white disc -> removed)
         "smoke": [((60, 590, 380, 717), (110, 45, 40))],       # red smoke at the lower back
         "paths": [
             # neck: from the head up over the right shoulder (off the top edge -> right arm)
-            ([(520, 280), (480, 200), (455, 110), (440, 30), (430, -40)], 105, (40, 28, 28)),
+            ([(510, 230), (475, 160), (455, 90), (440, 20), (430, -40)], 105, (40, 28, 28)),
             # body across the shoulder blades above the head, then down the left side
             ([(390, -40), (370, 60), (300, 130), (200, 120), (110, 120), (50, 180), (30, 290), (20, 380), (-60, 440)], 100, (40, 28, 28)),
             # continues on the front from the left side, across the belly, curls up under the head
             ([(880, 430), (780, 450), (680, 500), (570, 500), (490, 450), (480, 370), (530, 320), (600, 345)], 95, (40, 28, 28)),
-            # thin tail flicking down the belly
-            ([(600, 345), (650, 420), (660, 540), (630, 700)], 30, (45, 30, 30)),
+            # thin tail from the bottom of the coil (r06: starting at the jaws it read as a tongue)
+            ([(690, 505), (720, 580), (715, 650), (690, 717)], 30, (45, 30, 30)),
         ],
-        "polygons": [([(450, 60), (530, 30), (630, 80), (660, 170), (610, 235), (550, 300), (500, 290), (465, 200)], (35, 25, 25)),  # head on the right pec
-                     ([(565, 205), (630, 185), (605, 260)], (75, 25, 25))],                                                       # open jaws
+        "polygons": [([(455, 40), (540, 20), (630, 60), (660, 140), (615, 195), (555, 245), (505, 235), (470, 160)], (35, 25, 25)),  # head on the right pec (r06: higher, no room for a mane)
+                     ([(570, 160), (635, 140), (610, 215)], (75, 25, 25))],                                                       # open jaws
     },
     "face_back_dragon_chest": {
         "canvas": "wrap_torso",

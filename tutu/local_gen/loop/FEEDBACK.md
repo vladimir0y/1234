@@ -55,3 +55,13 @@
 - обличчя дівчини в рамці з тіла дракона, місяць маленький збоку від волосся, червоний дим унизу.
 Промпт r06: "black and grey tattoo with deep crimson accents on plain white background, fine linework, stippling; one single long modern dragon with a serpent-like body, bold graphic blackwork scales and ribbed belly plates, wraps around the whole design: its sleek smooth obsidian head with open jaws and long fangs on the right, the thick neck rises to the top edge, the long body arcs across the top above the woman's head, runs down the left edge and returns along the bottom right, coiling under the head, thin tail; in the left half a large face of a beautiful young asian woman framed by the dragon's body, messy dark hair, half-open pale eyes, parted lips, a small red moon beside her hair, wisps of red smoke below; contemporary blackwork tattoo, not a traditional chinese dragon, no horns, no whiskers, no mane"
 denoise 0.8 (якщо тіло дракона губиться — 0.7), 3 сіди. Оцінюй: чи видно ВСЕ тіло дракона одним шматком від голови до хвоста.
+
+## Аналіз r06 на тілі (r06_seed505) → зміни в нодах
+Прогрес: тіло дракона вперше суцільне — голова, шия через плече, дуга над головою дівчини, лівий бік, живіт.
+| Проблема на тілі | Зміна |
+|---|---|
+| Голова дракона опустилась на ребра, зверху грива/роги | форма голови в пресеті менша й вище (y 20–245), паща вище — немає місця на гриву |
+| Класичний дракон (роги, грива) | промпт з r07 від ПК (опис позитивний: «smooth and sleek like a black viper, polished obsidian») — підтримую |
+| Біла пляма на обличчі, хвіст як язик | правки ПК r07 перенесено в сам пресет `one_dragon_around_torso` (git pull) |
+| Обличчя — фото, наклеєне на спину, з чорним тлом волосся | у промпт: "the woman's face rendered as a black and grey tattoo on skin, soft stippled shading, hair strands fading into the skin, no dark background behind her" |
+Для r07: пресет `one_dragon_around_torso` з core.py (або `r07_guide_nodes.png`), blur 4, denoise 0.8, 3 сіди.
