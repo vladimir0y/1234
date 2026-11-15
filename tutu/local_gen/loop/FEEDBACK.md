@@ -45,3 +45,13 @@
 | Червона куля біля пащі | яскраво-червоний трикутник пащі | паща темніша (75,25,25) і менша |
 | Шия дракона тонка/обривається | короткий шлях | шлях довший (від низу голови 500,300 угору через плече), товщина 110 |
 Для r06: blur підкладки **4** (замість 10), щоб пасма диму лишились; denoise 0.8. Дракон — модерний (розділ вище).
+
+## ГОЛОВНЕ від власника (замінює дракона з r03–r05): ОДИН довгий дракон, що обвиває тулуб
+Референс — змія-бодісьют (голова на правому грудному, тіло через плечі по спині, по боці, через живіт, на руку). Зараз у нас лише голова й шия — це неправильно.
+Новий пресет **`one_dragon_around_torso`** (git pull, скопіюй core.py у custom_nodes\tutu, перезапусти ComfyUI). Підкладка: `tutu/local_gen/loop/r06_guide.png` (white, blur 4):
+- голова на правому грудному, шия вгору через праве плече (на руку);
+- тіло повертається на спину, дугою через лопатки НАД головою дівчини, вниз по лівому боці;
+- виходить на груди з лівого боку, перетинає живіт і закручується кільцем під головою, тонкий хвіст униз;
+- обличчя дівчини в рамці з тіла дракона, місяць маленький збоку від волосся, червоний дим унизу.
+Промпт r06: "black and grey tattoo with deep crimson accents on plain white background, fine linework, stippling; one single long modern dragon with a serpent-like body, bold graphic blackwork scales and ribbed belly plates, wraps around the whole design: its sleek smooth obsidian head with open jaws and long fangs on the right, the thick neck rises to the top edge, the long body arcs across the top above the woman's head, runs down the left edge and returns along the bottom right, coiling under the head, thin tail; in the left half a large face of a beautiful young asian woman framed by the dragon's body, messy dark hair, half-open pale eyes, parted lips, a small red moon beside her hair, wisps of red smoke below; contemporary blackwork tattoo, not a traditional chinese dragon, no horns, no whiskers, no mane"
+denoise 0.8 (якщо тіло дракона губиться — 0.7), 3 сіди. Оцінюй: чи видно ВСЕ тіло дракона одним шматком від голови до хвоста.

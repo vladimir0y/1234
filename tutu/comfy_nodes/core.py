@@ -71,6 +71,31 @@ LAYOUTS = {
                      ([(560, 205), (630, 185), (600, 265)], (75, 25, 25))],                                                       # open jaws (darker: r05 drew a red blob here)
         "path": ([(500, 300), (470, 200), (455, 110), (430, 40), (410, 0)], 110, (40, 28, 28)),                                   # thick neck up over the right shoulder
     },
+    # Owner's request after r05: ONE long dragon wrapping the torso (like a serpent bodysuit):
+    # head on the right pec, neck over the right shoulder; the body comes back over the upper back
+    # above the girl's head, runs down the left side, crosses the belly and curls under the head.
+    # The canvas is a cylinder: x=0 and x=820 are the same line on the left side, so the body
+    # leaves at x<0 and comes back at x>820.
+    "one_dragon_around_torso": {
+        "canvas": "wrap_torso",
+        "ellipses": [((70, 190, 370, 690), (55, 30, 30)),      # hair, under the dragon's back arc
+                     ((35, 175, 125, 265), (150, 30, 25)),     # red moon, upper left beside the hair
+                     ((95, 255, 335, 545), (170, 120, 105)),   # face, centred on the spine
+                     ((100, 255, 215, 430), (200, 150, 130))], # light on the cheek
+        "smoke": [((60, 590, 380, 717), (110, 45, 40))],       # red smoke at the lower back
+        "paths": [
+            # neck: from the head up over the right shoulder (off the top edge -> right arm)
+            ([(520, 280), (480, 200), (455, 110), (440, 30), (430, -40)], 105, (40, 28, 28)),
+            # body across the shoulder blades above the head, then down the left side
+            ([(390, -40), (370, 60), (300, 130), (200, 120), (110, 120), (50, 180), (30, 290), (20, 380), (-60, 440)], 100, (40, 28, 28)),
+            # continues on the front from the left side, across the belly, curls up under the head
+            ([(880, 430), (780, 450), (680, 500), (570, 500), (490, 450), (480, 370), (530, 320), (600, 345)], 95, (40, 28, 28)),
+            # thin tail flicking down the belly
+            ([(600, 345), (650, 420), (660, 540), (630, 700)], 30, (45, 30, 30)),
+        ],
+        "polygons": [([(450, 60), (530, 30), (630, 80), (660, 170), (610, 235), (550, 300), (500, 290), (465, 200)], (35, 25, 25)),  # head on the right pec
+                     ([(565, 205), (630, 185), (605, 260)], (75, 25, 25))],                                                       # open jaws
+    },
     "face_back_dragon_chest": {
         "canvas": "wrap_torso",
         "ellipses": [((60, 10, 345, 600), (70, 38, 26)),      # hair
@@ -148,14 +173,34 @@ def layout_guide(c: Canvas, preset: str, background: str = "dark", blur: int = 1
         d.ellipse(c.px([(x0, y0), (x1, y1)]), fill=col)
     for box, col in L.get("smoke", []):
         _smoke(g, c, box, col)
-    pts, w, col = L["path"]
-    d.line(c.px(pts), fill=col, width=int(w * c.scale), joint="curve")
-    d.line(c.px(pts), fill=tuple(min(255, v + 32) for v in col), width=int(w * c.scale * 0.27), joint="curve")
+    for pts, w, col in L.get("paths", [L["path"]] if "path" in L else []):
+        pts = c.px(_spline(pts, 40))
+        for width, colour in ((w, col), (w * 0.27, tuple(min(255, v + 32) for v in col))):  # body, then belly plates
+            r = width * c.scale / 2
+            for x, y in pts:  # round stamps: no notches at the bends
+                d.ellipse((x - r, y - r, x + r, y + r), fill=colour)
     for poly, col in L.get("polygons", []):
         d.polygon(c.px(poly), fill=col)
     if blur > 0:
         g = g.filter(ImageFilter.GaussianBlur(blur))
     return np.asarray(g, np.float32) / 255
+
+
+def _spline(pts, n: int = 12):
+    """Catmull-Rom through the points, so a body drawn as a polyline bends smoothly."""
+    if len(pts) < 3:
+        return pts
+    p = [pts[0]] + list(pts) + [pts[-1]]
+    out = []
+    for i in range(1, len(p) - 2):
+        (x0, y0), (x1, y1), (x2, y2), (x3, y3) = p[i - 1], p[i], p[i + 1], p[i + 2]
+        for k in range(n):
+            t = k / n
+            t2, t3 = t * t, t * t * t
+            out.append(tuple(0.5 * (2 * b + (-a + c2) * t + (2 * a - 5 * b + 4 * c2 - d) * t2 + (-a + 3 * b - 3 * c2 + d) * t3)
+                             for a, b, c2, d in ((x0, x1, x2, x3), (y0, y1, y2, y3))))
+    out.append(tuple(pts[-1]))
+    return out
 
 
 def _smoke(g: Image.Image, c: Canvas, box, col, seed: int = 7) -> None:
