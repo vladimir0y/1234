@@ -50,6 +50,13 @@ def test_dragon_body_zone_leaves_the_head():
     assert body.mean() > 0.1 and (body * head).max() == 0
 
 
+def test_whole_dragon_zone_keeps_the_head():
+    c = core.load_canvas("wrap_torso", 512)
+    head = core.zone_mask(c, ["dragon_head"], feather=0, on_body=False)
+    both = core.zone_mask(c, ["dragon_body", "dragon_head"], feather=0, on_body=False)
+    assert (both[head > 0.5] > 0.5).all()
+
+
 def test_layout_variations():
     c = core.load_canvas("wrap_torso", 256)
     base = core.layout_guide(c, "one_dragon_around_torso", "white", 0)
