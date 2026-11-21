@@ -2,161 +2,150 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tenor+Sans&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap&subset=cyrillic">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap&subset=cyrillic">
 <style>
-/* Layout: misty double-exposure poster — a leader's profile filled with a jade landscape, ink splatter, water streaks as dividers; chapters alternate pale mist and deep ink. Single deliberate look. */
+/* Layout: double-exposure poster longread — figures filled with a lime→teal→navy city that drips away at the bottom; pale mint chapters alternate with deep navy. Single deliberate look. */
 :root{
-  --mist:#EEF1EF;--mist2:#E2EAE6;--foam:#F8FAF9;
-  --j1:#A8E6CF;--j2:#5CC9A7;--j3:#2BA585;--j4:#17806A;--j5:#0E5A4C;
-  --ink:#0B1E1B;--ink2:#132E29;--txt:#10211E;--soft:#5D6E69;--on:#E6F4EF;
-  --d:"Tenor Sans","Times New Roman",serif;--s:"JetBrains Mono",ui-monospace,monospace;--b:"IBM Plex Sans",system-ui,sans-serif;
+  --mint:#EEF5E6;--mint2:#E1EED5;--paper:#F6FAF1;
+  --l1:#DCEFA5;--l2:#A9D67E;--l3:#5DB477;--t1:#22806F;--t2:#154A63;
+  --navy:#0E2235;--navy2:#16324A;--ink:#0F2533;--soft:#4F6B6A;--on:#E8F3DF;
+  --d:"Unbounded",system-ui,sans-serif;--s:"JetBrains Mono",ui-monospace,monospace;--b:"IBM Plex Sans",system-ui,sans-serif;
   color-scheme:light;
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{margin:0;background:var(--mist);color:var(--txt);font-family:var(--b);font-size:18px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-h1,h2,h3{font-family:var(--d);font-weight:400;margin:0;text-wrap:balance}
+body{margin:0;background:var(--mint);color:var(--ink);font-family:var(--b);font-size:18px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+h1,h2,h3{font-family:var(--d);font-weight:800;margin:0;text-wrap:balance}
 p{margin:0;text-wrap:pretty}
 button,input{font:inherit;color:inherit}
 .w{max-width:1160px;margin:0 auto;padding-left:max(clamp(16px,4vw,40px),env(safe-area-inset-left,0px));padding-right:max(clamp(16px,4vw,40px),env(safe-area-inset-right,0px));position:relative;z-index:2}
-.kick{font-family:var(--s);font-size:12px;font-weight:700;letter-spacing:.28em;text-transform:uppercase;color:var(--j4)}
-.h2{font-size:clamp(28px,4.2vw,58px);line-height:1.08;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);margin-top:18px;max-width:20ch}
-.lead{margin-top:24px;font-size:clamp(18px,1.5vw,21px);line-height:1.6;max-width:38rem;color:var(--txt)}
+.kick{font-family:var(--s);font-size:13px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--t1)}
+.h2{font-size:clamp(26px,4vw,54px);line-height:1.08;text-transform:uppercase;color:var(--navy);margin-top:18px;max-width:18ch}
+.lead{margin-top:24px;font-size:clamp(18px,1.5vw,21px);line-height:1.6;max-width:38rem}
 .sec{position:relative;padding-block:clamp(56px,7vw,104px) clamp(64px,8vw,120px)}
-.bgm{background:var(--mist)}.bgf{background:var(--foam)}.bgi{background:var(--ink);color:var(--on)}
-.bgi .kick{color:var(--j2)}.bgi .h2{color:var(--on)}.bgi .lead{color:rgba(230,244,239,.82)}
-/* hero */
-.hero{position:relative;background:var(--mist);overflow:hidden}
-.hero .w{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(16px,3vw,48px);align-items:center;padding-block:clamp(28px,4vw,56px) 0}
-.htxt{display:flex;flex-direction:column;gap:18px;padding-bottom:clamp(24px,4vw,64px)}
-.htxt .pre{font-family:var(--s);font-weight:700;font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--j4)}
-.htxt h1{font-size:clamp(40px,6.4vw,92px);line-height:.98;letter-spacing:.05em;text-transform:uppercase;color:var(--ink)}
-.htxt h1 span{display:block;color:var(--j4)}
-.htxt .sub{font-family:var(--d);font-size:clamp(18px,1.8vw,24px);letter-spacing:.32em;text-transform:uppercase;color:var(--soft)}
-.credits{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 24px;margin-top:10px;padding-top:20px;border-top:1px solid rgba(11,30,27,.18)}
-.credits div{display:flex;flex-direction:column;gap:2px;min-width:0}
-.credits small{font-family:var(--s);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--soft)}
-.credits b{font-weight:500;font-size:15px;line-height:1.4}
-.art{position:relative;min-width:0}
-.art svg{display:block;width:100%;height:auto;max-height:86vh}
-.bird{animation:drift 9s ease-in-out infinite alternate}
-@keyframes drift{to{transform:translate(14px,-8px)}}
-/* streak dividers */
-.st{position:relative;height:clamp(46px,6vw,80px);margin:-1px 0;overflow:hidden}
-.st svg{position:absolute;inset:0;width:100%;height:100%}
+.bgm{background:var(--mint)}.bgp{background:var(--paper)}.bgn{background:var(--navy);color:var(--on)}
+.bgn .kick{color:var(--l2)}.bgn .h2{color:var(--on)}.bgn .lead{color:rgba(232,243,223,.84)}
+/* hero: poster on mint, title on navy below */
+.hero{background:var(--mint)}
+.poster{max-width:760px;margin:0 auto;padding:clamp(20px,4vw,48px) max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));position:relative}
+.poster svg{display:block;width:100%;height:auto}
+.poster .top{position:absolute;top:clamp(28px,5vw,56px);left:0;right:0;text-align:center;font-family:var(--s);font-weight:700;font-size:clamp(12px,1.5vw,18px);letter-spacing:.5em;padding-left:.5em;text-transform:uppercase;color:var(--t1);z-index:2}
+.tblock{background:var(--navy);text-align:center;padding:clamp(36px,5vw,64px) max(16px,env(safe-area-inset-right,0px)) clamp(36px,4vw,56px) max(16px,env(safe-area-inset-left,0px));color:var(--on)}
+.tblock .pre{font-family:var(--s);font-weight:700;font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:var(--l2)}
+.tblock .pre small{display:block;font-size:.7em;margin-top:4px}
+.tblock h1{font-size:clamp(30px,5.6vw,80px);line-height:1.04;text-transform:uppercase;margin-top:18px}
+.tblock .sub{font-family:var(--s);font-weight:700;font-size:clamp(12px,1.3vw,16px);letter-spacing:.32em;text-transform:uppercase;color:var(--l3);margin-top:14px}
+.credits{max-width:860px;margin:36px auto 0;font-family:var(--s);font-weight:700;text-transform:uppercase;font-size:13px;line-height:1.9;color:var(--l2);letter-spacing:.06em}
+.credits small{font-size:.78em;font-weight:400;margin-right:.35em;color:var(--l3)}
+.credits span{margin-right:.7em}
+/* drip dividers */
+.dr{position:relative;height:clamp(60px,8vw,110px);margin:-1px 0;overflow:hidden}
+.dr svg{position:absolute;inset:0;width:100%;height:100%}
 /* I compare */
 .cmp{margin-top:56px;display:flex;flex-direction:column}
 .cmp .hd,.cmp .row{display:grid;grid-template-columns:minmax(0,1fr) 48px minmax(0,1fr);gap:16px;align-items:baseline}
-.cmp .hd{font-family:var(--s);font-weight:700;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--j4);padding-bottom:14px;border-bottom:2px solid var(--ink)}
-.cmp .row{padding:22px 0;border-bottom:1px solid rgba(11,30,27,.16)}
+.cmp .hd{font-family:var(--s);font-weight:700;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--t1);padding-bottom:14px;border-bottom:2px solid var(--navy)}
+.cmp .row{padding:22px 0;border-bottom:1px solid rgba(14,34,53,.16)}
 .cmp .ev{font-size:18px;color:var(--soft)}
-.cmp .ar{font-family:var(--d);font-size:26px;color:var(--j3);line-height:1}
-.cmp .ind{font-family:var(--d);font-size:clamp(18px,1.7vw,23px);line-height:1.3;letter-spacing:.04em;text-transform:uppercase;color:var(--ink)}
+.cmp .ar{font-family:var(--d);font-size:24px;color:var(--l3);line-height:1}
+.cmp .ind{font-family:var(--d);font-size:clamp(16px,1.5vw,20px);line-height:1.3;text-transform:uppercase;color:var(--t2)}
 /* II pillars */
 .lvls{display:flex;flex-wrap:wrap;gap:8px;margin-top:40px}
-.lvls button{font-family:var(--s);font-weight:700;font-size:12px;letter-spacing:.18em;text-transform:uppercase;padding:13px 20px;border-radius:2px;border:1.5px solid var(--on);background:transparent;cursor:pointer;color:var(--on);transition:background .2s,color .2s}
-.lvls button[aria-pressed="true"]{background:var(--j2);border-color:var(--j2);color:var(--ink)}
-.lvls button:hover{background:rgba(92,201,167,.14)}
-.lvls button[aria-pressed="true"]:hover{background:var(--j2)}
-button:focus-visible,input:focus-visible{outline:3px solid var(--j2);outline-offset:3px}
-.note{margin-top:18px;font-size:16px;color:var(--j1);min-height:1.6em}
+.lvls button{font-family:var(--d);font-weight:800;font-size:13px;letter-spacing:.04em;text-transform:uppercase;padding:13px 22px;border-radius:999px;border:2px solid var(--l2);background:transparent;cursor:pointer;color:var(--on);transition:background .2s,color .2s}
+.lvls button[aria-pressed="true"]{background:var(--l2);color:var(--navy)}
+.lvls button:hover{background:rgba(169,214,126,.14)}
+.lvls button[aria-pressed="true"]:hover{background:var(--l2)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--l2);outline-offset:3px}
+.note{margin-top:18px;font-size:16px;color:var(--l1);min-height:1.6em}
 .pils{margin-top:28px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
-.pil{display:flex;flex-direction:column;background:var(--ink2);border-radius:4px;overflow:hidden}
-.pil .top{height:150px;position:relative}
-.pil .top svg{position:absolute;inset:0;width:100%;height:100%}
-.pil .body{padding:20px 18px 22px;flex:1}
-.pil .n{font-family:var(--s);font-weight:700;font-size:12px;letter-spacing:.2em;color:var(--j2);display:block;margin-bottom:8px}
-.pil h3{font-size:20px;letter-spacing:.06em;text-transform:uppercase;color:var(--on)}
-.pil ul{margin:14px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;font-size:16px;line-height:1.45;color:rgba(230,244,239,.86);transition:opacity .25s}
+.pil{display:flex;flex-direction:column;background:var(--navy2);border-radius:10px;overflow:hidden}
+.pil .top{aspect-ratio:4/3;max-width:100%}
+.pil .top svg{display:block;width:100%;height:100%}
+.pil .body{padding:6px 18px 22px;flex:1}
+.pil .n{font-family:var(--s);font-weight:700;font-size:12px;letter-spacing:.2em;color:var(--l2);display:block;margin-bottom:8px}
+.pil h3{font-size:18px;line-height:1.15;text-transform:uppercase;color:var(--on)}
+.pil ul{margin:14px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;font-size:16px;line-height:1.45;color:rgba(232,243,223,.86);transition:opacity .25s}
 .pil ul.fade{opacity:0}
 .pil li{padding-left:16px;position:relative}
-.pil li::before{content:"";position:absolute;left:0;top:.6em;width:6px;height:6px;background:var(--j2);transform:rotate(45deg)}
+.pil li::before{content:"";position:absolute;left:0;top:.62em;width:7px;height:7px;border-radius:50%;background:var(--l3)}
 /* III styles */
 .styles{margin-top:56px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
-.sty{background:var(--foam);border-radius:4px;overflow:hidden;display:flex;flex-direction:column}
-.sty .pic{aspect-ratio:16/10;max-width:100%;background:var(--mist2)}
+.sty{background:var(--paper);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.sty .pic{aspect-ratio:1/1;max-width:100%;background:var(--mint2)}
 .sty .pic svg{display:block;width:100%;height:100%}
-.sty .body{padding:20px 22px 24px;display:flex;flex-direction:column;gap:10px;flex:1}
-.sty h3{font-size:22px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
-.sty .q{font-family:var(--d);font-size:17px;color:var(--j4)}
-.sty dl{margin:auto 0 0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 12px;font-size:15px;line-height:1.45;padding-top:12px;border-top:1px solid rgba(11,30,27,.14)}
+.sty .body{padding:8px 22px 24px;display:flex;flex-direction:column;gap:8px;flex:1}
+.sty h3{font-size:19px;text-transform:uppercase;color:var(--navy)}
+.sty .q{font-family:var(--s);font-size:14px;font-weight:700;color:var(--t1)}
+.sty dl{margin:auto 0 0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 12px;font-size:15px;line-height:1.45;padding-top:12px;border-top:1px solid rgba(14,34,53,.14)}
 .sty dt{font-family:var(--s);font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--soft);padding-top:3px}
 .sty dd{margin:0}
-.styles-note{margin-top:22px;font-family:var(--s);font-weight:700;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--j4)}
-/* IV bridge */
-.bridge{margin-top:56px;overflow-x:auto}
-.bridge svg{display:block;width:100%;min-width:640px;height:auto}
-.span{margin-top:8px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:18px}
+.styles-note{margin-top:22px;font-family:var(--s);font-weight:700;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--t1)}
+/* IV aqueduct */
+.aq{margin-top:48px;overflow-x:auto}
+.aq svg{display:block;width:100%;min-width:640px;height:auto}
+.span{margin:0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:18px}
 .span li{list-style:none;display:flex;flex-direction:column;gap:8px}
-.span ol{margin:0;padding:0;display:contents}
-.span b{font-family:var(--s);font-size:12px;letter-spacing:.2em;color:var(--j2)}
-.span h3{font-size:19px;letter-spacing:.05em;text-transform:uppercase;color:var(--on)}
-.span p{font-size:16px;line-height:1.45;color:rgba(230,244,239,.8)}
-/* V light/shadow */
+.span b{font-family:var(--d);font-weight:800;font-size:32px;line-height:1;color:var(--l2)}
+.span h3{font-size:16px;line-height:1.2;text-transform:uppercase;color:var(--on)}
+.span p{font-size:16px;line-height:1.45;color:rgba(232,243,223,.8)}
+/* V light & shadow */
 .ls{margin-top:56px;display:flex;flex-direction:column;gap:12px}
 .ls .hd,.ls .row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
-.ls .hd span{font-family:var(--s);font-weight:700;font-size:12px;letter-spacing:.22em;text-transform:uppercase}
-.ls .hd span:first-child{color:var(--j4)}.ls .hd span:last-child{color:var(--ink)}
-.ls .row>div{padding:22px 24px;font-size:18px;line-height:1.5;border-radius:4px}
-.ls .lt{background:var(--foam)}
-.ls .sh{background:var(--ink);color:var(--on)}
+.ls .hd span{font-family:var(--s);font-weight:700;font-size:13px;letter-spacing:.22em;text-transform:uppercase}
+.ls .hd span:first-child{color:var(--t1)}.ls .hd span:last-child{color:var(--navy)}
+.ls .row>div{padding:22px 24px;font-size:18px;line-height:1.5;border-radius:6px}
+.ls .lt{background:var(--l1)}
+.ls .sh{background:var(--t2);color:var(--on)}
 /* VI self-check */
 .self{margin-top:48px;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:clamp(24px,4vw,56px);align-items:start}
 .sl{display:flex;flex-direction:column;gap:26px}
 .sl label{display:flex;flex-direction:column;gap:10px}
 .sl .t{font-size:17px;line-height:1.45}
-.sl .t small{display:block;font-family:var(--s);font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--j4);margin-bottom:4px}
+.sl .t small{display:block;font-family:var(--s);font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--t1);margin-bottom:4px}
 .sl .rr{display:grid;grid-template-columns:minmax(0,1fr) 28px;gap:12px;align-items:center}
-.sl output{font-family:var(--s);font-weight:700;font-size:18px;color:var(--j4);text-align:right;font-variant-numeric:tabular-nums}
-input[type=range]{width:100%;accent-color:var(--j4)}
-.scale{display:flex;justify-content:space-between;font-family:var(--s);font-size:11px;color:var(--soft);letter-spacing:.08em}
-.res{background:var(--ink);color:var(--on);border-radius:4px;padding:clamp(22px,3vw,32px);position:sticky;top:calc(env(safe-area-inset-top,0px) + 20px)}
-.res h3{font-size:22px;letter-spacing:.06em;text-transform:uppercase}
-.bars{margin-top:20px;display:flex;flex-direction:column;gap:12px}
+.sl output{font-family:var(--s);font-weight:700;font-size:18px;color:var(--t1);text-align:right;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--t1)}
+.scale{display:flex;justify-content:space-between;font-family:var(--s);font-size:11px;color:var(--soft)}
+.res{background:var(--navy);color:var(--on);border-radius:10px;overflow:hidden;position:sticky;top:calc(env(safe-area-inset-top,0px) + 20px)}
+.res .rp{height:120px}.res .rp svg{display:block;width:100%;height:100%}
+.res .rb{padding:8px clamp(22px,3vw,30px) clamp(22px,3vw,30px)}
+.res h3{font-size:18px;text-transform:uppercase}
+.bars{margin-top:18px;display:flex;flex-direction:column;gap:12px}
 .bar{display:grid;grid-template-columns:96px minmax(0,1fr) 22px;gap:10px;align-items:center;font-size:14px}
-.bar i{display:block;height:10px;background:rgba(230,244,239,.12);border-radius:1px;position:relative;overflow:hidden}
-.bar i::after{content:"";position:absolute;inset:0 auto 0 0;width:var(--v);background:var(--j2);transition:width .3s}
-.bar.low i::after{background:var(--j1)}
+.bar i{display:block;height:10px;background:rgba(232,243,223,.12);border-radius:5px;position:relative;overflow:hidden}
+.bar i::after{content:"";position:absolute;inset:0 auto 0 0;width:var(--v);background:linear-gradient(90deg,var(--t1),var(--l2));border-radius:5px;transition:width .3s}
 .bar span:last-child{font-family:var(--s);text-align:right;font-variant-numeric:tabular-nums}
-.res .adv{margin-top:22px;padding-top:18px;border-top:1px solid rgba(230,244,239,.2);font-size:16px;line-height:1.5;color:rgba(230,244,239,.88)}
-.res .adv b{color:var(--j2);font-weight:600}
+.res .adv{margin-top:20px;padding-top:16px;border-top:1px solid rgba(232,243,223,.2);font-size:16px;line-height:1.5;color:rgba(232,243,223,.88)}
+.res .adv b{color:var(--l2);font-weight:600}
 /* VII route */
 .route{margin-top:56px;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:28px;counter-reset:r}
-.route li{list-style:none;counter-increment:r;display:flex;flex-direction:column;gap:10px;padding-top:18px;border-top:1.5px solid var(--j3)}
-.route li::before{content:"0" counter(r);font-family:var(--d);font-size:40px;line-height:1;color:var(--j2)}
-.route h3{font-size:18px;letter-spacing:.05em;text-transform:uppercase;color:var(--on)}
-.route p{font-size:16px;color:rgba(230,244,239,.8)}
-.endc{margin-top:96px;text-align:center}
-.endc .t{font-family:var(--d);font-size:clamp(26px,3.6vw,48px);letter-spacing:.08em;line-height:1.1;text-transform:uppercase}
-.endc .s{font-family:var(--s);font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--j2);font-size:12px;margin-top:14px}
-@media(prefers-reduced-motion:reduce){.bird{animation:none}.pil ul,.lvls button,.bar i::after{transition:none}html{scroll-behavior:auto}}
-@media(max-width:980px){.pils{grid-template-columns:repeat(2,minmax(0,1fr))}.styles{grid-template-columns:repeat(2,minmax(0,1fr))}.route{grid-template-columns:repeat(2,minmax(0,1fr))}.span{grid-template-columns:repeat(2,minmax(0,1fr))}.self{grid-template-columns:1fr}.res{position:static}}
-@media(max-width:760px){.hero .w{grid-template-columns:1fr}.htxt{order:2}.art{order:1;margin-inline:auto;max-width:520px}
-.cmp .hd{display:none}.cmp .row{grid-template-columns:1fr;gap:6px}.cmp .ar{display:none}
-.ls .row{grid-template-columns:1fr;gap:6px;margin-bottom:10px}.ls .hd{display:none}}
-@media(max-width:520px){.pils,.styles,.route,.span{grid-template-columns:1fr}.credits{grid-template-columns:1fr}}
+.route li{list-style:none;counter-increment:r;display:flex;flex-direction:column;gap:10px;padding-top:18px;border-top:2px solid var(--l3)}
+.route li::before{content:"0" counter(r);font-family:var(--d);font-weight:800;font-size:40px;line-height:1;color:var(--l2)}
+.route h3{font-size:17px;line-height:1.2;text-transform:uppercase;color:var(--on)}
+.route p{font-size:16px;color:rgba(232,243,223,.8)}
+.endc{margin-top:80px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.endc .fig{width:min(260px,60vw)}.endc .fig svg{display:block;width:100%;height:auto}
+.endc .t{font-family:var(--d);font-size:clamp(24px,3.6vw,48px);line-height:1.1;text-transform:uppercase;margin-top:12px}
+.endc .s{font-family:var(--s);font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--l3);font-size:13px;margin-top:14px}
+@media(prefers-reduced-motion:reduce){.pil ul,.lvls button,.bar i::after{transition:none}html{scroll-behavior:auto}}
+@media(max-width:980px){.pils{grid-template-columns:repeat(2,minmax(0,1fr))}.styles{grid-template-columns:repeat(2,minmax(0,1fr))}.route,.span{grid-template-columns:repeat(2,minmax(0,1fr))}.self{grid-template-columns:1fr}.res{position:static}}
+@media(max-width:760px){.cmp .hd{display:none}.cmp .row{grid-template-columns:1fr;gap:6px}.cmp .ar{display:none}.ls .row{grid-template-columns:1fr;gap:6px;margin-bottom:10px}.ls .hd{display:none}}
+@media(max-width:520px){.pils,.styles,.route,.span{grid-template-columns:1fr}.lvls button{padding:11px 16px;font-size:12px}}
 </style>
 
 <header class="hero">
-<div class="w">
-<div class="htxt">
-<p class="pre">Курс для тімлідів і керівників</p>
-<h1>Лідерство <span>в команді</span></h1>
+<div class="poster" aria-hidden="true"><div class="top">Лідерство</div><div id="heroArt"></div></div>
+<div class="tblock">
+<p class="pre">Курс для тімлідів і керівників<small>представляє</small></p>
+<h1>Лідерство в команді</h1>
 <p class="sub">Той, за ким ідуть</p>
-<div class="credits">
-<div><small>Формат</small><b>курс · 7 модулів</b></div>
-<div><small>Тривалість</small><b>45 хвилин</b></div>
-<div><small>Моделі</small><b>6 стилів Гоулмана, зміни за Коттером</b></div>
-<div><small>Для</small><b>тімлідів, PM, неформальних лідерів</b></div>
-</div>
-</div>
-<div class="art" id="heroArt" aria-hidden="true"></div>
+<p class="credits"><span><small>Формат</small>курс · 7 модулів</span><span><small>Тривалість</small>45 хвилин</span><span><small>Моделі</small>6 стилів Гоулмана, зміни за Коттером</span><span><small>Для</small>тімлідів, PM, неформальних лідерів</span></p>
 </div>
 </header>
 
-<div class="st" data-a="#EEF1EF" data-b="#F8FAF9"></div>
+<div class="dr" data-a="#0E2235" data-b="#F6FAF1"></div>
 
-<section class="sec bgf">
+<section class="sec bgp">
 <div class="w">
 <p class="kick">I · Хто веде</p>
 <h2 class="h2">Лідер не той, хто попереду. Той, за ким ідуть.</h2>
@@ -171,9 +160,9 @@ input[type=range]{width:100%;accent-color:var(--j4)}
 </div>
 </section>
 
-<div class="st" data-a="#F8FAF9" data-b="#0B1E1B"></div>
+<div class="dr" data-a="#F6FAF1" data-b="#0E2235"></div>
 
-<section class="sec bgi">
+<section class="sec bgn">
 <div class="w">
 <p class="kick">II · П’ять опор</p>
 <h2 class="h2">На чому тримається лідерство</h2>
@@ -189,11 +178,11 @@ input[type=range]{width:100%;accent-color:var(--j4)}
 </div>
 </section>
 
-<div class="st" data-a="#0B1E1B" data-b="#EEF1EF"></div>
+<div class="dr" data-a="#0E2235" data-b="#EEF5E6"></div>
 
 <section class="sec bgm">
 <div class="w">
-<p class="kick">III · Шість ліхтарів</p>
+<p class="kick">III · Шість облич</p>
 <h2 class="h2">Шість стилів лідерства</h2>
 <p class="lead">Модель Деніела Гоулмана. Сильний лідер володіє кількома стилями й перемикається між ними за ситуацією. Кожен стиль має свою ціну.</p>
 <div class="styles" id="styles"></div>
@@ -201,27 +190,27 @@ input[type=range]{width:100%;accent-color:var(--j4)}
 </div>
 </section>
 
-<div class="st" data-a="#EEF1EF" data-b="#0B1E1B"></div>
+<div class="dr" data-a="#EEF5E6" data-b="#0E2235"></div>
 
-<section class="sec bgi">
+<section class="sec bgn">
 <div class="w">
-<p class="kick">IV · Міст через туман</p>
+<p class="kick">IV · Акведук</p>
 <h2 class="h2">Як провести команду через зміни</h2>
-<p class="lead">Більшість змін провалюється не через план, а через людей, які не розуміють, навіщо переходити. Спрощена модель Джона Коттера в п’ять прольотів.</p>
-<div class="bridge" id="bridge" aria-hidden="true"></div>
-<div class="span"><ol>
-<li><b>Проліт 1</b><h3>Причина</h3><p>Покажіть, чому залишатися на місці гірше, ніж іти. Факти, а не страх.</p></li>
-<li><b>Проліт 2</b><h3>Союзники</h3><p>Знайдіть двох-трьох людей, яким команда довіряє, і залучіть їх першими.</p></li>
-<li><b>Проліт 3</b><h3>Картина</h3><p>Опишіть, як виглядатиме робота після змін, так, щоб це можна було переказати.</p></li>
-<li><b>Проліт 4</b><h3>Перші перемоги</h3><p>Заплануйте результат, який буде видно за 4–6 тижнів, і відзначте його.</p></li>
-<li><b>Проліт 5</b><h3>Закріплення</h3><p>Перенесіть нове в процеси, найм і ритуали, щоб не повернутися назад.</p></li>
-</ol></div>
+<p class="lead">Більшість змін провалюється не через план, а через людей, які не розуміють, навіщо переходити. Спрощена модель Джона Коттера у п’ять арок.</p>
+<div class="aq" id="aq" aria-hidden="true"></div>
+<ol class="span">
+<li><b>1</b><h3>Причина</h3><p>Покажіть, чому залишатися на місці гірше, ніж іти. Факти, а не страх.</p></li>
+<li><b>2</b><h3>Союзники</h3><p>Знайдіть двох-трьох людей, яким команда довіряє, і залучіть їх першими.</p></li>
+<li><b>3</b><h3>Картина</h3><p>Опишіть, як виглядатиме робота після змін, так, щоб це можна було переказати.</p></li>
+<li><b>4</b><h3>Перші перемоги</h3><p>Заплануйте результат, який буде видно за 4–6 тижнів, і відзначте його.</p></li>
+<li><b>5</b><h3>Закріплення</h3><p>Перенесіть нове в процеси, найм і ритуали, щоб не повернутися назад.</p></li>
+</ol>
 </div>
 </section>
 
-<div class="st" data-a="#0B1E1B" data-b="#F8FAF9"></div>
+<div class="dr" data-a="#0E2235" data-b="#F6FAF1"></div>
 
-<section class="sec bgf">
+<section class="sec bgp">
 <div class="w">
 <p class="kick">V · Світло і тінь</p>
 <h2 class="h2">Команда дивиться на те, що ви робите</h2>
@@ -237,7 +226,7 @@ input[type=range]{width:100%;accent-color:var(--j4)}
 </div>
 </section>
 
-<div class="st" data-a="#F8FAF9" data-b="#EEF1EF"></div>
+<div class="dr" data-a="#F6FAF1" data-b="#EEF5E6"></div>
 
 <section class="sec bgm">
 <div class="w">
@@ -246,14 +235,14 @@ input[type=range]{width:100%;accent-color:var(--j4)}
 <p class="lead">Оцініть, наскільки твердження про вас правдиве за останній місяць. 1 означає «майже ніколи», 5 означає «майже завжди». Результат бачите лише ви.</p>
 <div class="self">
 <div class="sl" id="sl"></div>
-<aside class="res" aria-live="polite"><h3>Ваше відображення</h3><div class="bars" id="bars"></div><p class="adv" id="adv"></p></aside>
+<aside class="res" aria-live="polite"><div class="rp" id="rp" aria-hidden="true"></div><div class="rb"><h3>Ваше відображення</h3><div class="bars" id="bars"></div><p class="adv" id="adv"></p></div></aside>
 </div>
 </div>
 </section>
 
-<div class="st" data-a="#EEF1EF" data-b="#0B1E1B"></div>
+<div class="dr" data-a="#EEF5E6" data-b="#0E2235"></div>
 
-<section class="sec bgi">
+<section class="sec bgn">
 <div class="w">
 <p class="kick">VII · Далі сам</p>
 <h2 class="h2">Чотири кроки на наступний місяць</h2>
@@ -264,66 +253,73 @@ input[type=range]{width:100%;accent-color:var(--j4)}
 <li><h3>Спробуйте новий стиль</h3><p>Оберіть із розділу III той, яким користуєтесь найрідше, і застосуйте в одній розмові.</p></li>
 <li><h3>Попросіть відгук</h3><p>Спитайте двох людей: що мені варто почати, перестати і продовжувати робити?</p></li>
 </ol>
-<div class="endc"><p class="t">Той, за ким ідуть</p><p class="s">Лідерство в команді · курс для керівників</p></div>
+<div class="endc"><div class="fig" id="endFig" aria-hidden="true"></div><p class="t">Той, за ким ідуть</p><p class="s">Лідерство в команді · курс для керівників</p></div>
 </div>
 </section>
 
 <script>
 const rnd=s=>()=>{s=(s*9301+49297)%233280;return s/233280};
 const f=n=>n.toFixed(1);
-function ridge(seed,{gy,n,hMin,hMax,W,H,jit=14}){const r=rnd(seed);let d=`M0,${H} L0,${f(gy)}`;
-for(let i=0;i<n;i++){const x=i*W/n+r()*W/n*.5,w=W/n*(.4+r()*.5),h=hMin+r()*(hMax-hMin),g=gy+(r()-.5)*jit;
-d+=` L${f(x)},${f(g)} L${f(x+w*.35)},${f(g-h*.7)} L${f(x+w*.5)},${f(g-h)} L${f(x+w*.62)},${f(g-h*.82)} L${f(x+w)},${f(g)}`}
-return d+` L${W},${f(gy)} L${W},${H} Z`}
-const walker=(x,y,s,c)=>`<g transform="translate(${x} ${y}) scale(${s})" fill="${c}"><circle cy="-30" r="4.6"/><path d="M-5,-24 L5,-24 L6,-10 L4,0 L1,0 L0,-9 L-1,0 L-4,0 L-6,-10 Z"/></g>`;
-function splatter(seed,cx,cy,rx,ry,n,c){const r=rnd(seed);let o='';for(let i=0;i<n;i++){const a=r()*Math.PI*2,d=.85+Math.pow(r(),2)*.6;const x=cx+Math.cos(a)*rx*d,y=cy+Math.sin(a)*ry*d;o+=`<circle cx="${f(x)}" cy="${f(y)}" r="${f(.6+r()*r()*4)}" fill="${c}" opacity="${f(.35+r()*.6)}"/>`}return o}
-const birds=(arr,c)=>`<g fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round">${arr.map(([x,y,s])=>`<path class="bird" transform="translate(${x} ${y}) scale(${s})" d="M-9,0 Q-4,-5 0,0 Q4,-5 9,0"/>`).join('')}</g>`;
+let UID=0;
+/* poster gradient stops: lime sky → green → teal → navy */
+const STOPS=[[0,'#E2F2AE'],[.35,'#B4DB84'],[.52,'#6DBA76'],[.66,'#2E8C72'],[.8,'#17516A'],[1,'#0E2235']];
+const grad=(id,y0,y1)=>`<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="${y0}" x2="0" y2="${y1}">${STOPS.map(([o,c])=>`<stop offset="${o}" stop-color="${c}"/>`).join('')}</linearGradient>`;
+/* city skyline built from towers, arches, a windmill, fences and stairs */
+function city(seed,W,base,scale,opt={}){const r=rnd(seed);const s=scale;let o='';
+const lay=[['#C4E38F',.0,1.0],['#8DC970',.18,.8],['#4FA674',.34,.62],['#24786F',.48,.45],['#174A62',.62,.3]];
+lay.forEach(([c,dy,hk],li)=>{const gy=base+dy*s*320;let x=-20;o+=`<g fill="${c}"><rect x="0" y="${f(gy)}" width="${W}" height="${f(s*2000)}"/>`;
+while(x<W+20){const w=(18+r()*46)*s,h=(40+r()*170)*hk*s;o+=`<rect x="${f(x)}" y="${f(gy-h)}" width="${f(w)}" height="${f(h+2)}"/>`;
+if(r()<.35)o+=`<path d="M${f(x-3*s)},${f(gy-h)} L${f(x+w/2)},${f(gy-h-22*s)} L${f(x+w+3*s)},${f(gy-h)}Z"/>`;
+if(r()<.3){const n=Math.max(2,Math.round(w/(7*s)));for(let k=0;k<n;k++)o+=`<rect x="${f(x+k*w/n)}" y="${f(gy-h-7*s)}" width="${f(w/n*.55)}" height="${f(7*s)}"/>`}
+if(li===2&&r()<.25){const aw=w*2.4;for(let k=0;k<3;k++){const ax=x+w+k*aw/3;o+=`<path d="M${f(ax)},${f(gy-h*.6)} h${f(aw/3)} v${f(h*.6+400*s)} h${f(-aw/12)} v${f(-h*.3-400*s)} a${f(aw/12)},${f(aw/12)} 0 0 0 ${f(-aw/6)},0 v${f(h*.3+400*s)} h${f(-aw/12)}Z"/>`}x+=aw}
+x+=w+(4+r()*40)*s}
+if(li===1&&opt.mill){const mx=opt.mill*W,my=gy-150*s,bl=70*s;o+=`<rect x="${f(mx-9*s)}" y="${f(my)}" width="${f(18*s)}" height="${f(160*s)}"/>`;for(let k=0;k<4;k++)o+=`<rect x="${f(mx-4*s)}" y="${f(my-bl)}" width="${f(8*s)}" height="${f(bl)}" transform="rotate(${20+k*90} ${f(mx)} ${f(my)})"/><rect x="${f(mx+4*s)}" y="${f(my-bl)}" width="${f(12*s)}" height="${f(bl*.75)}" transform="rotate(${20+k*90} ${f(mx)} ${f(my)})" opacity=".7"/>`}
+if(li===0&&opt.rose){const cx=opt.rose*W,cy=gy-120*s;o+=`<circle cx="${f(cx)}" cy="${f(cy)}" r="${f(24*s)}" fill="none" stroke="${lay[1][0]}" stroke-width="${f(4*s)}"/>${[0,45,90,135].map(a=>`<rect x="${f(cx-1.5*s)}" y="${f(cy-24*s)}" width="${f(3*s)}" height="${f(48*s)}" fill="${lay[1][0]}" transform="rotate(${a} ${f(cx)} ${f(cy)})"/>`).join('')}`}
+if(li===3){for(let k=0;k<Math.round(W/(14*s))*.4;k++){const fx=r()*W;o+=`<rect x="${f(fx)}" y="${f(gy-40*s)}" width="${f(4*s)}" height="${f(60*s)}"/>`}
+if(opt.stairs){const sx=opt.stairs*W;for(let k=0;k<12;k++)o+=`<rect x="${f(sx+k*9*s)}" y="${f(gy-k*11*s)}" width="${f(120*s)}" height="${f(11*s+1)}"/>`}}
+if(li===2&&opt.lights){const lx=opt.lights*W;for(let k=0;k<6;k++)o+=`<circle cx="${f(lx+k*14*s)}" cy="${f(gy-90*s)}" r="${f(3.2*s)}" fill="#9EF0D6"/>`}
+if(li===1&&opt.tree){const tx=opt.tree*W,ty=gy-180*s;o+=`<rect x="${f(tx-3*s)}" y="${f(ty)}" width="${f(6*s)}" height="${f(40*s)}"/>`;for(let k=0;k<9;k++)o+=`<circle cx="${f(tx+(r()-.5)*44*s)}" cy="${f(ty-r()*30*s)}" r="${f((8+r()*10)*s)}"/>`}
+o+=`</g>`});return o}
+/* paint drips: mask that keeps everything above y0 and drags thin strokes below it */
+function dripMask(id,seed,W,y0,len,step){const r=rnd(seed);let o=`<mask id="${id}" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${y0+len+20}"><rect width="${W}" height="${y0}" fill="#fff"/><linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".7" stop-color="#fff" stop-opacity=".7"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>`;
+for(let x=0;x<W;x+=step*(.5+r())){const l=len*Math.pow(r(),1.6),w=step*(.4+r()*1.2);o+=`<rect x="${f(x)}" y="${f(y0-2)}" width="${f(w)}" height="${f(l+4)}" fill="url(#${id}g)"/>`}
+return o+`</mask>`}
+const ROUGH=`<filter id="rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency=".04" numOctaves="3" seed="3"/><feDisplacementMap in="SourceGraphic" scale="9"/></filter><filter id="grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="5"/><feColorMatrix values="0 0 0 0 .05 0 0 0 0 .14 0 0 0 0 .2 0 0 0 .45 0"/><feComposite in2="SourceGraphic" operator="in"/></filter>`;
+/* a double-exposure panel: figure shapes filled with a skyline and dripping away */
+function panel({W,H,shapes,seed,base,scale,opt,dripY,dripLen,step=7,bg=''}){const id='p'+(UID++);
+const sky=`<rect width="${W}" height="${H}" fill="url(#${id}s)"/><g fill="none" stroke="#F4FBE6" stroke-linecap="round" opacity=".28"><path d="M${W*.1},${H*.24} q${W*.2},-${H*.03} ${W*.42},0 t${W*.4},0" stroke-width="${f(W/90)}"/><path d="M${W*.25},${H*.3} q${W*.15},-${H*.02} ${W*.3},0" stroke-width="${f(W/160)}"/></g>`;
+return`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet"><defs>${grad(id+'s',H*.05,dripY+dripLen*.3)}<clipPath id="${id}c">${shapes}</clipPath>${dripMask(id+'m',seed+1,W,dripY,dripLen,step)}</defs>${bg}
+<g mask="url(#${id}m)"><g filter="url(#rough)" clip-path="url(#${id}c)">${sky}${city(seed,W,base,scale,opt)}<rect width="${W}" height="${H}" fill="#000" filter="url(#grain)"/></g></g></svg>`}
 
-/* HERO: a leader's profile, filled with a lighthouse, a bridge and a team crossing it */
-const PROFILE='M250,960 L250,850 C252,790 298,752 372,736 L404,726 C414,700 410,680 398,662 C356,636 326,594 318,544 C304,474 312,404 348,346 C392,276 466,236 552,238 C646,240 716,292 744,372 C756,408 760,440 756,470 L796,540 C801,551 796,559 783,562 L768,566 L773,590 C775,601 768,607 760,609 L765,629 C767,645 757,655 741,657 C716,661 692,661 682,672 C674,686 678,704 692,722 L702,736 C772,752 812,792 816,860 L816,960 Z';
-(function(){
-const W=1000,H=1000;
-const inside=`
-<rect width="1000" height="1000" fill="url(#sky)"/>
-<circle cx="600" cy="400" r="46" fill="#E9FBF3" opacity=".9"/><circle cx="600" cy="400" r="90" fill="none" stroke="#E9FBF3" stroke-width="12" opacity=".2"/>
-<g fill="none" stroke="#E9FBF3" stroke-linecap="round" opacity=".7"><path d="M380,330 C440,318 500,342 580,326 S700,310 740,330" stroke-width="7"/><path d="M420,360 C480,352 540,372 620,360" stroke-width="4"/></g>
-<path d="${ridge(7,{gy:600,n:6,hMin:40,hMax:150,W,H})}" fill="#8FDBBF"/>
-<path d="${ridge(31,{gy:650,n:5,hMin:40,hMax:120,W,H})}" fill="#58C4A1"/>
-<g fill="#1D7F68">
-<path d="M330,700 L352,610 L372,580 L404,566 L440,572 L462,600 L476,700 Z"/>
-<path d="M398,572 L404,466 L428,466 L434,572 Z"/><rect x="396" y="446" width="40" height="22"/><path d="M392,446 L416,422 L440,446 Z"/><rect x="413" y="410" width="6" height="14"/>
-</g>
-<path d="M412,456 L250,410 L250,500 Z" fill="#E9FBF3" opacity=".28"/><circle cx="416" cy="457" r="7" fill="#F4FFF9"/>
-<g fill="#156A57"><rect x="470" y="640" width="320" height="12"/>${[0,1,2,3,4].map(i=>`<path d="M${478+i*62},652 L${478+i*62},720 L${486+i*62},720 Q${509+i*62},672 ${532+i*62},720 L${540+i*62},720 L${540+i*62},652 Z"/>`).join('')}</g>
-<g fill="none" stroke="#156A57" stroke-width="3">${[0,1,2,3,4,5].map(i=>`<path d="M${472+i*62},640 L${472+i*62},596"/>`).join('')}<path d="M470,600 Q532,622 594,600 Q656,622 718,600 Q760,616 790,604"/></g>
-${walker(512,640,1.1,'#0E4A3D')}${walker(548,640,1.05,'#0E4A3D')}${walker(580,640,1.1,'#0E4A3D')}${walker(612,640,1,'#0E4A3D')}${walker(660,640,1.18,'#0E4A3D')}
-<circle cx="672" cy="622" r="4" fill="#F4FFF9"/><circle cx="672" cy="622" r="12" fill="#F4FFF9" opacity=".25"/>
-<path d="${ridge(57,{gy:760,n:4,hMin:30,hMax:110,W,H})}" fill="#0F4A3E"/>
-<rect y="770" width="1000" height="230" fill="url(#fade)"/>
-${birds([[470,250,1],[500,270,.8],[690,290,.9],[720,262,.7]],'#0E5A4C')}`;
-const streaks=(()=>{const r=rnd(5);let o='';for(let i=0;i<34;i++){const y=850+r()*140,x=100+r()*760,w=30+r()*190;o+=`<rect x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(2+r()*4)}" fill="#EEF1EF" opacity="${f(.5+r()*.5)}"/>`}return o})();
-const wave=(()=>{const r=rnd(9);let o='';for(let i=0;i<22;i++){const y=900+r()*90,x=r()*1000,w=60+r()*220;o+=`<rect x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(3+r()*5)}" fill="#0B1E1B" opacity="${f(.25+r()*.6)}"/>`}return o})();
-document.getElementById('heroArt').innerHTML=`<svg viewBox="0 0 1000 1000">
-<defs>
-<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset=".2" stop-color="#C9F1E1"/><stop offset=".55" stop-color="#6CD0AE"/><stop offset=".8" stop-color="#2BA585"/></linearGradient>
-<linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0B1E1B" stop-opacity="0"/><stop offset=".35" stop-color="#0B1E1B"/></linearGradient>
-<clipPath id="prof"><path d="${PROFILE}"/></clipPath>
-<filter id="rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency=".045" numOctaves="3" seed="4"/><feDisplacementMap in="SourceGraphic" scale="16"/></filter>
-<filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" seed="2"/><feColorMatrix values="0 0 0 0 .04 0 0 0 0 .12 0 0 0 0 .1 0 0 0 .55 0"/><feComposite in2="SourceGraphic" operator="in"/></filter>
-</defs>
-${splatter(3,533,560,330,370,190,'#0E5A4C')}
-${birds([[140,230,1.3],[190,260,1],[860,300,1.2],[900,330,.9],[820,180,.8],[120,520,.9]],'#2BA585')}
-<g filter="url(#rough)"><g clip-path="url(#prof)">${inside}</g></g>
-<rect x="240" y="230" width="590" height="760" fill="#000" filter="url(#grain)" clip-path="url(#prof)" opacity=".5"/>
-<g>${streaks}${wave}</g>
-</svg>`;})();
+/* figure builders (original poses), coordinates for a 1000×1100 hero */
+const HERO_SHAPES=`
+<ellipse cx="382" cy="236" rx="60" ry="68"/>
+<path d="M326,214 Q338,150 402,152 Q462,160 462,226 L470,262 Q474,286 456,300 L446,312 Q430,262 410,250 Z"/>
+<path d="M356,286 L410,286 L414,330 L352,330 Z"/>
+<path d="M290,338 Q380,306 476,336 L506,470 L536,1100 L222,1100 L250,640 L276,470 Z"/>
+<path d="M296,346 L248,476 L196,600 L168,640 L132,668 L128,690 L150,688 L170,668 L178,696 L192,690 L196,660 L232,614 L292,500 L330,410 Z"/>
+<ellipse cx="642" cy="372" rx="54" ry="62"/>
+<path d="M592,352 Q600,300 652,302 Q704,312 700,372 L708,402 Q690,384 676,372 Z"/>
+<path d="M620,420 L668,420 L670,456 L618,456 Z"/>
+<path d="M552,462 Q640,432 730,462 L770,590 L800,1100 L512,1100 L532,590 Z"/>
+<path d="M712,470 L772,548 L790,590 L768,606 L706,520 Z"/>
+<path d="M686,1040 L708,1046 L872,288 L850,282 Z"/>
+<path d="M868,286 L874,372 L790,334 Z"/>`;
+document.getElementById('heroArt').innerHTML=panel({W:1000,H:1140,shapes:HERO_SHAPES,seed:21,base:520,scale:1.15,opt:{mill:.64,rose:.32,stairs:.68,lights:.27,tree:.25},dripY:860,dripLen:270,step:9})
+.replace('<defs>','<defs>'+ROUGH);
 
-/* streak dividers: band A dissolving into B as horizontal water strokes */
-document.querySelectorAll('.st').forEach((el,i)=>{const A=el.dataset.a,B=el.dataset.b,r=rnd(17+i*13);el.style.background=A;let o='';
-for(let k=0;k<70;k++){const t=r(),y=10+t*90,x=r()*1440,w=40+r()*260*(.4+t);o+=`<rect x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(1.5+t*7)}" fill="${B}" opacity="${f(.35+t*.65)}"/>`}
-el.innerHTML=`<svg viewBox="0 0 1440 100" preserveAspectRatio="none" aria-hidden="true">${o}<rect y="94" width="1440" height="7" fill="${B}"/></svg>`});
+/* drip dividers */
+document.querySelectorAll('.dr').forEach((el,i)=>{const A=el.dataset.a,B=el.dataset.b,r=rnd(31+i*17);el.style.background=B;let o=`<rect width="1440" height="16" fill="${A}"/>`;
+for(let x=0;x<1440;x+=4+r()*8){const l=8+Math.pow(r(),2.2)*90,w=2+r()*9;o+=`<rect x="${f(x)}" y="12" width="${f(w)}" height="${f(l)}" rx="${f(w/2)}" fill="${A}" opacity="${f(.55+r()*.45)}"/>`}
+el.innerHTML=`<svg viewBox="0 0 1440 110" preserveAspectRatio="none" aria-hidden="true">${o}</svg>`});
 
-/* II pillars */
+/* simple original poses for vignettes, on a 400×400 canvas, feet at y≈400 */
+const fig=(x,y,s,pose)=>{const T=`transform="translate(${x} ${y}) scale(${s})"`;
+const head=`<ellipse cx="0" cy="-262" rx="30" ry="34"/>`,body=`<path d="M-48,-214 Q0,-232 48,-214 L62,-120 L76,40 L-76,40 L-62,-120 Z"/><rect x="-14" y="-236" width="28" height="26"/>`;
+const arms={stand:'',point:`<path d="M40,-208 L150,-250 L156,-236 L52,-180 Z"/>`,lantern:`<path d="M40,-206 L78,-120 L62,-114 L32,-176 Z"/><rect x="62" y="-118" width="26" height="34" rx="6"/>`,open:`<path d="M-40,-206 L-118,-150 L-108,-138 L-30,-180 Z"/><path d="M40,-206 L118,-150 L108,-138 L30,-180 Z"/>`,staff:`<path d="M30,-200 L74,-150 L60,-140 L22,-180 Z"/><path d="M58,40 L74,40 L104,-330 L88,-332 Z"/><path d="M100,-330 L102,-270 L150,-300 Z"/>`,kneel:`<path d="M40,-206 L96,-178 L90,-164 L32,-182 Z"/>`};
+return (head+body+(arms[pose]||'')).replace(/<(ellipse|path|rect) /g,`<$1 ${T} `)};
+
+/* II pillars: dripping skylines */
 const NOTE=['Усе йде за планом. Час інвестувати в людей і напрям.','Щось зламалося. Команда дивиться на вас уважніше, ніж будь-коли.','Старе вже не працює, нове ще не звичне. Людям тривожно.','Команда росте, приходять нові люди. Культуру легко розмити.'];
 const PIL=[
 ['Бачення',[['Пояснює, куди рухаємось через рік','Пов’язує щоденні задачі з метою'],['Звужує фокус до трьох найважливіших речей','Каже, що буде після кризи'],['Малює картину «після» простими словами','Повторює напрям, доки його не перекажуть'],['Передає бачення новим людям у перший тиждень','Залучає команду до уточнення цілей']]],
@@ -331,74 +327,47 @@ const PIL=[
 ['Довіра',[['Дає автономію в зрозумілих межах','Визнає власні помилки'],['Чесно розповідає, що відомо, а що ні','Не шукає винних, доки гасять пожежу'],['Пояснює, що зміниться для кожного особисто','Слухає опір, а не придушує його'],['Делегує рішення досвідченим','Знайомить новачків з неформальними лідерами']]],
 ['Рішення',[['Залучає команду до рішень','Збирає думки, перш ніж вирішити'],['Вирішує швидко з тим, що є','Чітко каже, хто що робить до кінця дня'],['Фіксує, що змінюється, а що лишається','Не відкладає незручні рішення'],['Описує, хто які рішення ухвалює','Відпускає рішення, які може ухвалити команда']]],
 ['Турбота',[['Регулярно проводить 1:1','Помічає втому раніше, ніж вигорання'],['Стежить, щоб люди відпочивали після авралу','Дякує конкретно, а не загально'],['Питає, що людині потрібно для переходу','Дає час навчитися новому'],['Не дає старожилам вигоріти на онбордингу','Вирощує нових лідерів усередині']]]];
-const PIC=['#5CC9A7','#2BA585','#17806A','#0E5A4C','#A8E6CF'];
-const pilIcon=i=>{const c=PIC[i],dark='#0B1E1B';const r=rnd(40+i*9);
-const sc=[
-`<circle cx="100" cy="66" r="18" fill="#E6F4EF" opacity=".85"/><path d="M0,150 L0,110 L40,86 L70,104 L100,72 L132,100 L160,84 L200,108 L200,150Z" fill="${dark}"/>${walker(100,74,1.2,dark)}`,
-`<path d="M0,150 L0,120 L200,120 L200,150Z" fill="${dark}"/><rect x="92" y="62" width="16" height="58" fill="${dark}"/><path d="M86,62 L100,46 L114,62Z" fill="${dark}"/><path d="M100,70 L10,46 L10,94Z" fill="#E6F4EF" opacity=".35"/><circle cx="100" cy="70" r="5" fill="#F4FFF9"/>`,
-`<path d="M0,150 L0,122 L200,122 L200,150Z" fill="${dark}"/>${walker(82,122,1.6,dark)}${walker(118,122,1.6,dark)}<path d="M89,92 Q100,84 111,92" stroke="${dark}" stroke-width="4" fill="none"/>`,
-`<path d="M0,150 L0,124 L200,124 L200,150Z" fill="${dark}"/><path d="M100,124 L100,90 M100,90 L60,60 M100,90 L140,60" stroke="${dark}" stroke-width="7" fill="none" stroke-linecap="round"/><circle cx="60" cy="60" r="8" fill="${dark}"/><circle cx="140" cy="60" r="8" fill="#E6F4EF"/>`,
-`<path d="M0,150 L0,124 L200,124 L200,150Z" fill="${dark}"/><path d="M92,124 Q100,90 108,124Z" fill="#F4FFF9"/><circle cx="100" cy="112" r="26" fill="#F4FFF9" opacity=".18"/>${walker(60,124,1.4,dark)}${walker(142,124,1.4,dark)}`][i];
-let sp='';for(let k=0;k<26;k++)sp+=`<circle cx="${f(r()*200)}" cy="${f(r()*100)}" r="${f(.5+r()*2)}" fill="${dark}" opacity=".35"/>`;
-return`<svg viewBox="0 0 200 150" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><rect width="200" height="150" fill="${c}"/>${sp}${sc}</svg>`};
+const pilPose=['point','stand','open','staff','lantern'];
 const pils=document.getElementById('pils'),note=document.getElementById('note');
-pils.innerHTML=PIL.map(([n],i)=>`<article class="pil"><div class="top">${pilIcon(i)}</div><div class="body"><span class="n">0${i+1}</span><h3>${n}</h3><ul></ul></div></article>`).join('');
+pils.innerHTML=PIL.map(([n],i)=>`<article class="pil"><div class="top" aria-hidden="true">${panel({W:400,H:300,shapes:fig(200,300,.62,pilPose[i]),seed:50+i*7,base:130,scale:.5,opt:{mill:i===1?.6:0,lights:i===3?.3:0,tree:i===4?.3:0,stairs:i===2?.55:0},dripY:220,dripLen:80,step:5})}</div><div class="body"><span class="n">0${i+1}</span><h3>${n}</h3><ul></ul></div></article>`).join('');
 const rm=matchMedia('(prefers-reduced-motion: reduce)').matches;
 function fill(l){pils.querySelectorAll('ul').forEach((u,i)=>u.innerHTML=PIL[i][1][l].map(t=>`<li>${t}</li>`).join(''));note.textContent=NOTE[l]}
 function setL(l){document.querySelectorAll('#lvls button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.l===l));const uls=pils.querySelectorAll('ul');uls.forEach(u=>u.classList.add('fade'));setTimeout(()=>{fill(l);uls.forEach(u=>u.classList.remove('fade'))},rm?0:180)}
 document.getElementById('lvls').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setL(+b.dataset.l)});
 fill(0);
 
-/* III six styles, each with its own double-exposure vignette */
+/* III six styles: each a figure composition */
 const STY=[
-['Директивний','«Роби, як я кажу»','Криза, аварія, загроза безпеці','Убиває ініціативу, якщо триває довше за кризу'],
-['Візіонерський','«Ходімо туди разом»','Новий напрям, втрачений сенс','Не працює, якщо команда знає більше за лідера'],
-['Афіліативний','«Спершу люди»','Після конфлікту, у стресі, щоб відновити довіру','Без вимог до результату якість просідає'],
-['Демократичний','«Що ви думаєте?»','Коли потрібні ідеї і є час','Нескінченні обговорення в терміновій ситуації'],
-['Задавання темпу','«Роби, як я, і швидше»','Сильна вмотивована команда, короткий ривок','Вигорання, якщо тримати темп постійно'],
-['Коучинговий','«Спробуй сам»','Людина хоче рости і готова вчитися','Марний, якщо людина не хоче змінюватись']];
-const styPic=i=>{const r=rnd(70+i*11),dk='#0B1E1B',g1='#A8E6CF',g2='#5CC9A7',g3='#17806A';
-const shapes=[
-`M160,250 L160,190 C160,160 180,140 210,135 C200,120 196,100 200,84 C206,58 228,44 250,44 C272,44 294,58 300,84 C304,100 300,120 290,135 C320,140 340,160 340,190 L340,250Z`,
-`M130,250 L170,120 L210,170 L250,60 L290,150 L330,110 L370,250Z`,
-`M250,250 C150,250 120,190 120,150 C120,110 150,80 190,80 C220,80 240,100 250,118 C260,100 280,80 310,80 C350,80 380,110 380,150 C380,190 350,250 250,250Z`,
-`M130,250 A120,120 0 0 1 370,250 Z`,
-`M120,250 L180,150 L230,150 L250,110 L280,110 L380,250Z`,
-`M150,250 L150,150 C150,100 190,60 250,60 C310,60 350,100 350,150 L350,250Z`][i];
-const scene=[
-`<path d="M0,250 L0,200 L500,200 L500,250Z" fill="${dk}"/><rect x="238" y="110" width="24" height="90" fill="${dk}"/><path d="M228,110 L250,86 L272,110Z" fill="${dk}"/><path d="M250,120 L120,90 L120,150Z" fill="#F4FFF9" opacity=".3"/>`,
-`<path d="M0,250 L0,200 L120,160 L200,190 L250,120 L300,180 L380,150 L500,200 L500,250Z" fill="${dk}"/><path d="M250,120 L250,80 L278,90 L250,100" fill="none" stroke="${dk}" stroke-width="4"/>${walker(210,190,1.6,dk)}${walker(240,196,1.4,dk)}`,
-`<path d="M0,250 L0,206 L500,206 L500,250Z" fill="${dk}"/><path d="M240,206 Q250,170 260,206Z" fill="#F4FFF9"/>${walker(200,206,1.8,dk)}${walker(300,206,1.8,dk)}${walker(225,206,1.5,dk)}${walker(275,206,1.5,dk)}`,
-`<path d="M0,250 L0,210 L500,210 L500,250Z" fill="${dk}"/><ellipse cx="250" cy="200" rx="70" ry="12" fill="${dk}"/>${walker(196,196,1.6,dk)}${walker(230,192,1.6,dk)}${walker(270,192,1.6,dk)}${walker(304,196,1.6,dk)}`,
-`<path d="M0,250 L0,200 L500,200 L500,250Z" fill="${dk}"/><path d="M150,200 L360,130" stroke="${dk}" stroke-width="5"/>${walker(330,150,1.6,dk)}${walker(280,166,1.5,dk)}${walker(230,182,1.4,dk)}`,
-`<path d="M0,250 L0,206 L500,206 L500,250Z" fill="${dk}"/>${walker(210,206,2,dk)}${walker(280,206,1.5,dk)}<path d="M228,150 Q252,140 266,160" stroke="${dk}" stroke-width="3" fill="none"/><circle cx="285" cy="140" r="9" fill="#F4FFF9"/>`][i];
-let sp='';for(let k=0;k<60;k++){const a=r()*6.28,d=110+r()*60;sp+=`<circle cx="${f(250+Math.cos(a)*d*1.3)}" cy="${f(160+Math.sin(a)*d*.7)}" r="${f(.6+r()*r()*3.5)}" fill="${g3}" opacity="${f(.3+r()*.6)}"/>`}
-const st=(()=>{let o='';for(let k=0;k<12;k++)o+=`<rect x="${f(110+r()*240)}" y="${f(256+r()*44)}" width="${f(20+r()*110)}" height="${f(1.5+r()*3)}" fill="${dk}" opacity="${f(.3+r()*.6)}"/>`;return o})();
-return`<svg viewBox="0 0 500 312" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><clipPath id="sc${i}"><path d="${shapes}"/></clipPath><linearGradient id="sg${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${g1}"/><stop offset=".7" stop-color="${g2}"/><stop offset="1" stop-color="${g3}"/></linearGradient></defs>${sp}<g filter="url(#rough)" clip-path="url(#sc${i})"><rect width="500" height="312" fill="url(#sg${i})"/><circle cx="${300-i*14}" cy="110" r="18" fill="#F4FFF9" opacity=".8"/>${scene}</g>${st}</svg>`};
-document.getElementById('styles').innerHTML=STY.map(([n,q,w,risk],i)=>`<article class="sty"><div class="pic">${styPic(i)}</div><div class="body"><h3>${n}</h3><p class="q">${q}</p><dl><dt>Коли</dt><dd>${w}</dd><dt>Ризик</dt><dd>${risk}</dd></dl></div></article>`).join('');
+['Директивний','«Роби, як я кажу»','Криза, аварія, загроза безпеці','Убиває ініціативу, якщо триває довше за кризу',fig(200,400,1,'point')],
+['Візіонерський','«Ходімо туди разом»','Новий напрям, втрачений сенс','Не працює, якщо команда знає більше за лідера',fig(170,400,1,'staff')+fig(300,400,.62,'stand')],
+['Афіліативний','«Спершу люди»','Після конфлікту, у стресі, щоб відновити довіру','Без вимог до результату якість просідає',fig(140,400,.85,'open')+fig(268,400,.85,'stand')],
+['Демократичний','«Що ви думаєте?»','Коли потрібні ідеї і є час','Нескінченні обговорення в терміновій ситуації',fig(90,400,.62,'stand')+fig(200,400,.78,'open')+fig(310,400,.62,'stand')],
+['Задавання темпу','«Роби, як я, і швидше»','Сильна вмотивована команда, короткий ривок','Вигорання, якщо тримати темп постійно',fig(250,400,.95,'point')+fig(120,400,.62,'stand')],
+['Коучинговий','«Спробуй сам»','Людина хоче рости і готова вчитися','Марний, якщо людина не хоче змінюватись',fig(150,400,.9,'lantern')+fig(290,400,.72,'stand')]];
+document.getElementById('styles').innerHTML=STY.map(([n,q,w,risk,sh],i)=>`<article class="sty"><div class="pic" aria-hidden="true">${panel({W:400,H:400,shapes:sh,seed:90+i*11,base:180,scale:.62,opt:{mill:i%3===1?.62:0,rose:i%2?0:.35,lights:i===3?.2:0,stairs:i===4?.5:0,tree:i===5?.25:0},dripY:300,dripLen:95,step:5})}</div><div class="body"><h3>${n}</h3><p class="q">${q}</p><dl><dt>Коли</dt><dd>${w}</dd><dt>Ризик</dt><dd>${risk}</dd></dl></div></article>`).join('');
 
-/* IV bridge with five spans and the team crossing */
-(function(){let arch='';for(let i=0;i<5;i++){const x=i*280;arch+=`<path d="M${x},100 L${x},220 L${x+16},220 Q${x+140},130 ${x+264},220 L${x+280},220 L${x+280},100Z"/>`}
-let fog='';const r=rnd(99);for(let k=0;k<40;k++)fog+=`<rect x="${f(r()*1400)}" y="${f(230+r()*60)}" width="${f(40+r()*240)}" height="${f(2+r()*5)}" fill="#5CC9A7" opacity="${f(.15+r()*.45)}"/>`;
-let ppl='';[[160,1],[430,1.05],[720,1.1],[980,1],[1250,1.15]].forEach(([x,s],k)=>ppl+=walker(x,100,s*1.6,k<3?'#A8E6CF':'#5CC9A7'));
-let posts='';for(let i=0;i<=20;i++)posts+=`<rect x="${i*70}" y="64" width="4" height="36"/>`;
-document.getElementById('bridge').innerHTML=`<svg viewBox="0 0 1400 300"><defs><linearGradient id="bf" x1="0" x2="1"><stop offset="0" stop-color="#2BA585"/><stop offset="1" stop-color="#0E5A4C"/></linearGradient></defs>
-<g fill="url(#bf)"><rect y="92" width="1400" height="10"/>${arch}${posts}<path d="M0,70 Q175,90 350,70 Q525,90 700,70 Q875,90 1050,70 Q1225,90 1400,70 L1400,74 Q1225,94 1050,74 Q875,94 700,74 Q525,94 350,74 Q175,94 0,74Z"/></g>
-${[0,1,2,3,4].map(i=>`<text x="${i*280+140}" y="200" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="22" font-weight="700" fill="#5CC9A7">${i+1}</text>`).join('')}
-${ppl}<circle cx="1262" cy="40" r="6" fill="#F4FFF9"/><circle cx="1262" cy="40" r="18" fill="#F4FFF9" opacity=".2"/>${fog}</svg>`})();
+/* IV aqueduct: five arches with the team walking across, dripping into the night */
+(function(){const W=1400,H=420;let sh='';for(let i=0;i<5;i++){const x=i*280;sh+=`<path d="M${x},150 h280 v240 h-26 v-120 a114,114 0 0 0 -228,0 v120 h-26Z"/>`}
+sh+=`<rect x="0" y="136" width="${W}" height="18"/>`;for(let i=0;i<=28;i++)sh+=`<rect x="${i*50}" y="104" width="6" height="34"/>`;sh+=`<rect x="0" y="100" width="${W}" height="6"/>`;
+[[150,'point'],[430,'stand'],[700,'staff'],[980,'stand'],[1240,'lantern']].forEach(([x,p],k)=>sh+=fig(x,136,.3,p));
+let nums='';for(let i=0;i<5;i++)nums+=`<text x="${i*280+140}" y="250" text-anchor="middle" font-family="Unbounded,system-ui,sans-serif" font-weight="800" font-size="44" fill="#E2F2AE">${i+1}</text>`;
+document.getElementById('aq').innerHTML=panel({W,H,shapes:sh,seed:140,base:180,scale:.7,opt:{mill:.55,lights:.2},dripY:340,dripLen:80,step:6})})();
 
 /* VI self-check */
+document.getElementById('rp').innerHTML=panel({W:600,H:180,shapes:'<rect width="600" height="180"/>',seed:170,base:60,scale:.42,opt:{mill:.7,rose:.2,lights:.45},dripY:130,dripLen:50,step:5});
 const SELF=[['Бачення','Моя команда може своїми словами пояснити, куди ми рухаємось і навіщо.','Почніть кожну планову зустріч з одного речення про напрям. Через місяць попросіть когось його переказати.'],
 ['Приклад','Я роблю сам те, чого вимагаю від команди, зокрема в дрібницях.','Оберіть одне правило команди, яке ви іноді порушуєте, і тримайте його бездоганно місяць.'],
 ['Довіра','Люди приносять мені погані новини рано, а не в останній момент.','Коли наступного разу почуєте погану новину, першими словами скажіть «дякую, що сказав».'],
 ['Рішення','Я ухвалюю складні рішення вчасно і пояснюю, чому вони саме такі.','Знайдіть рішення, яке відкладаєте найдовше, і ухваліть його цього тижня з поясненням для команди.'],
 ['Турбота','Я знаю, що зараз найбільше турбує кожного в команді.','Проведіть 1:1 з кожним і спитайте: що зараз забирає в тебе найбільше енергії?']];
-const sl=document.getElementById('sl'),bars=document.getElementById('bars'),adv=document.getElementById('adv');
-const vals=[4,3,4,3,3];
+const sl=document.getElementById('sl'),bars=document.getElementById('bars'),adv=document.getElementById('adv');const vals=[4,3,4,3,3];
 sl.innerHTML=SELF.map(([n,t],i)=>`<label for="r${i}"><span class="t"><small>${n}</small>${t}</span><span class="rr"><input type="range" id="r${i}" min="1" max="5" step="1" value="${vals[i]}"><output id="o${i}" for="r${i}">${vals[i]}</output></span><span class="scale"><span>майже ніколи</span><span>майже завжди</span></span></label>`).join('');
 function upd(){SELF.forEach((_,i)=>{vals[i]=+document.getElementById('r'+i).value;document.getElementById('o'+i).textContent=vals[i]});
 const mn=Math.min(...vals),mx=Math.max(...vals),lo=vals.indexOf(mn),hi=vals.indexOf(mx);
-bars.innerHTML=SELF.map(([n],i)=>`<div class="bar${i===lo&&mn<mx?' low':''}"><span>${n}</span><i style="--v:${vals[i]*20}%"></i><span>${vals[i]}</span></div>`).join('');
+bars.innerHTML=SELF.map(([n],i)=>`<div class="bar"><span>${n}</span><i style="--v:${vals[i]*20}%"></i><span>${vals[i]}</span></div>`).join('');
 adv.innerHTML=mn===mx?`Опори рівні. Попросіть двох колег оцінити вас за цими ж твердженнями й порівняйте.`:`Найсильніша опора: <b>${SELF[hi][0]}</b>. Зона росту: <b>${SELF[lo][0]}</b>. ${SELF[lo][2]}`}
 sl.addEventListener('input',upd);upd();
+
+/* closing figures */
+document.getElementById('endFig').innerHTML=panel({W:400,H:440,shapes:fig(150,420,.95,'staff')+fig(290,420,.8,'stand'),seed:200,base:200,scale:.62,opt:{mill:.68,rose:.3,stairs:.45},dripY:330,dripLen:100,step:5});
 </script>
