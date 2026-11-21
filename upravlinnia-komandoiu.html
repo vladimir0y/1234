@@ -1,0 +1,347 @@
+<title>Управління командою</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;700&family=Unbounded:wght@400;800&display=swap&subset=cyrillic">
+<style>
+/* Layout: travel-poster longread — parallax hero with citadel, wavy bands between six chapters + a self-check. Single deliberate look (poster palette), not theme-switched. */
+:root{
+  --sky0:#EEF7E0;--sky1:#C8EAA8;--sky2:#9AD688;
+  --p1:#F7F1E6;--p2:#E8F2D8;--p3:#D3E9BE;
+  --g1:#A9DD8C;--g2:#73C477;--g3:#45A462;--g4:#2C7F4F;--g5:#1D5E3E;
+  --m:#123A2C;--ink:#0E2C22;--cr:#EEF6E1;
+  --d:"Unbounded",system-ui,sans-serif;--s:"JetBrains Mono",ui-monospace,monospace;--b:"IBM Plex Sans",system-ui,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--p1);color:var(--ink);font-family:var(--b);font-size:18px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+h1,h2,h3{font-family:var(--d);font-weight:800;margin:0;text-wrap:balance}
+p{margin:0;text-wrap:pretty}
+button{font:inherit;color:inherit}
+.w{max-width:1160px;margin:0 auto;padding-left:max(clamp(16px,4vw,40px),env(safe-area-inset-left,0px));padding-right:max(clamp(16px,4vw,40px),env(safe-area-inset-right,0px));position:relative;z-index:2}
+.kick{font-family:var(--s);font-size:13px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--g4)}
+.h2{font-size:clamp(26px,4vw,54px);line-height:1.08;text-transform:uppercase;color:var(--m);margin-top:18px;max-width:18ch}
+.lead{margin-top:24px;font-size:clamp(18px,1.5vw,21px);line-height:1.6;max-width:38rem}
+/* grain like a screen-printed poster */
+.grain{position:absolute;inset:0;pointer-events:none;z-index:9;opacity:.22;mix-blend-mode:multiply;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.05 0 0 0 0 0.2 0 0 0 0 0.12 0 0 0 1.6 -0.55'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+/* hero */
+.hero{position:relative;background:var(--m)}
+.scene{position:relative;height:max(480px,78vh);overflow:hidden;background:linear-gradient(180deg,var(--sky0) 0%,var(--sky1) 45%,var(--sky2) 85%,#86CC78 100%)}
+.scene svg{position:absolute;left:0;bottom:-1px;width:100%;height:100%;will-change:transform}
+.scene .top{position:absolute;top:clamp(28px,5vw,56px);left:0;right:0;text-align:center;z-index:10;font-family:var(--s);font-weight:700;font-size:clamp(13px,1.6vw,20px);letter-spacing:.5em;padding-left:.5em;text-transform:uppercase;color:var(--g5)}
+.tblock{position:relative;z-index:3;text-align:center;padding:clamp(8px,2vw,24px) max(16px,env(safe-area-inset-right,0px)) clamp(28px,3vw,40px) max(16px,env(safe-area-inset-left,0px));color:var(--cr)}
+.tblock .pre{font-family:var(--s);font-weight:700;font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:var(--g1)}
+.tblock .pre small{display:block;font-size:.7em;margin-top:4px}
+.tblock h1{font-size:clamp(28px,5.6vw,80px);line-height:1.04;text-transform:uppercase;margin-top:18px;color:var(--cr)}
+.tblock .sub{font-family:var(--s);font-weight:700;font-size:clamp(12px,1.3vw,16px);letter-spacing:.32em;text-transform:uppercase;color:var(--g2);margin-top:14px}
+.credits{max-width:860px;margin:36px auto 0;font-family:var(--s);font-weight:700;text-transform:uppercase;font-size:13px;line-height:1.9;color:var(--g1);letter-spacing:.06em}
+.credits small{font-size:.78em;font-weight:400;margin-right:.35em;color:var(--g2);opacity:.9}
+.credits span{margin-right:.7em}
+/* dividers */
+.hz{position:relative;height:clamp(50px,6vw,90px);overflow:hidden;margin:-1px 0}
+.hz svg{position:absolute;inset:0;width:100%;height:100%}
+/* sections */
+.sec{position:relative;padding-block:clamp(56px,7vw,104px) clamp(64px,8vw,120px)}
+.bg1{background:var(--p1)}.bg2{background:var(--p2)}.bg3{background:var(--p3)}.bgm{background:var(--m);color:var(--cr)}
+/* I compare */
+.cmp{margin-top:56px;display:flex;flex-direction:column}
+.cmp .hd,.cmp .row{display:grid;grid-template-columns:minmax(0,1fr) 48px minmax(0,1fr);gap:16px;align-items:baseline}
+.cmp .hd{font-family:var(--s);font-weight:700;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--g4);padding-bottom:14px;border-bottom:2px solid var(--m)}
+.cmp .row{padding:22px 0;border-bottom:1px solid rgba(18,58,44,.2)}
+.cmp .ev{font-size:18px;line-height:1.45;color:rgba(14,44,34,.62)}
+.cmp .ar{font-family:var(--d);font-size:24px;color:var(--g3);line-height:1}
+.cmp .ind{font-family:var(--d);font-size:clamp(16px,1.5vw,20px);line-height:1.3;text-transform:uppercase;color:var(--g5)}
+/* II towers */
+.lvls{display:flex;flex-wrap:wrap;gap:8px;margin-top:40px}
+.lvls button{font-family:var(--d);font-weight:800;font-size:13px;letter-spacing:.04em;text-transform:uppercase;padding:13px 22px;border-radius:999px;border:2px solid var(--m);background:transparent;cursor:pointer;color:var(--m);transition:background .22s,color .22s}
+.lvls button[aria-pressed="true"]{background:var(--m);color:var(--cr)}
+.lvls button:hover{background:rgba(18,58,44,.08)}
+.lvls button[aria-pressed="true"]:hover{background:var(--m)}
+.lvls button:focus-visible,.opt:focus-visible{outline:3px solid var(--g3);outline-offset:3px}
+.stage-note{margin-top:18px;font-size:16px;color:var(--g5);min-height:1.6em}
+.peaks{margin-top:28px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;align-items:stretch}
+.peak{display:flex;flex-direction:column;background:var(--p1);border-radius:10px;overflow:hidden}
+.peak .top{position:relative;height:150px;overflow:hidden}
+.peak .top svg{position:absolute;inset:0;width:100%;height:100%}
+.peak .body{padding:20px 18px 22px;flex:1}
+.peak h3{font-size:18px;line-height:1.15;text-transform:uppercase;color:var(--m)}
+.peak .n{font-family:var(--s);font-weight:700;font-size:12px;letter-spacing:.2em;color:var(--g4);display:block;margin-bottom:8px}
+.peak ul{margin:14px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;font-size:16px;line-height:1.45;transition:opacity .25s}
+.peak ul.fade{opacity:0}
+.peak li{padding-left:16px;position:relative}
+.peak li::before{content:"";position:absolute;left:0;top:.62em;width:7px;height:7px;border-radius:50%;background:var(--g3)}
+/* III climb */
+.climb{margin-top:56px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:end}
+.step{display:flex;flex-direction:column;gap:8px;padding:22px 20px 24px;border-radius:6px 6px 0 0}
+.step:nth-child(1){background:var(--g1);min-height:250px}
+.step:nth-child(2){background:var(--g2);min-height:310px}
+.step:nth-child(3){background:var(--g4);color:var(--cr);min-height:370px}
+.step:nth-child(4){background:var(--g5);color:var(--cr);min-height:430px}
+.step b{font-family:var(--d);font-weight:800;font-size:52px;line-height:.9}
+.step .alt{font-family:var(--s);font-weight:700;font-size:11px;letter-spacing:.2em;text-transform:uppercase;opacity:.75}
+.step h3{font-size:18px;line-height:1.15;text-transform:uppercase}
+.step p{font-size:16px;line-height:1.45}
+.step .ex{margin-top:auto;padding-top:12px;border-top:1px solid currentColor;font-style:italic;font-size:15px;opacity:.92}
+.climb-base{height:18px;background:var(--m);border-radius:0 0 6px 6px}
+.climb-note{margin-top:18px;font-family:var(--s);font-weight:700;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--g4)}
+/* IV light & shadow */
+.ls{margin-top:56px;display:flex;flex-direction:column;gap:12px}
+.ls .hd,.ls .row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.ls .hd span{font-family:var(--s);font-weight:700;font-size:13px;letter-spacing:.22em;text-transform:uppercase}
+.ls .hd span:first-child{color:var(--g4)}.ls .hd span:last-child{color:var(--m)}
+.ls .row>div{padding:22px 24px;font-size:18px;line-height:1.5;border-radius:6px}
+.ls .lt{background:var(--p1);color:var(--ink)}
+.ls .sh{background:var(--g5);color:var(--cr)}
+/* V questions */
+.qs{margin-top:56px}
+.qs ol{margin:0;padding:0}
+.qs li{list-style:none;display:grid;grid-template-columns:110px minmax(0,1fr);gap:24px;align-items:baseline;padding:26px 0;border-bottom:1px solid rgba(18,58,44,.2)}
+.qs b{font-family:var(--d);font-weight:800;font-size:44px;line-height:1;color:var(--g3)}
+.qs p{font-size:clamp(20px,2vw,26px);font-weight:600;line-height:1.35;color:var(--m)}
+.tip{margin-top:40px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:center;background:var(--p2);border-radius:6px;padding:22px 24px}
+.tip i{width:44px;height:44px;border-radius:50%;background:var(--g3);box-shadow:0 0 0 8px rgba(69,164,98,.25),0 0 0 16px rgba(69,164,98,.12)}
+.tip p{font-size:17px}
+/* VI quiz */
+.quiz{margin-top:48px;display:flex;flex-direction:column;gap:18px}
+.q{background:var(--p1);border-radius:10px;padding:clamp(20px,3vw,32px)}
+.q .qn{font-family:var(--s);font-weight:700;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--g4)}
+.q h3{font-family:var(--b);font-weight:600;font-size:clamp(18px,1.8vw,22px);line-height:1.35;color:var(--m);margin-top:8px}
+.opts{margin-top:18px;display:flex;flex-wrap:wrap;gap:8px}
+.opt{text-align:left;font-size:16px;line-height:1.35;padding:12px 18px;border-radius:999px;border:2px solid rgba(18,58,44,.35);background:transparent;color:var(--m);cursor:pointer;transition:background .2s,border-color .2s,color .2s}
+.opt:hover{border-color:var(--m)}
+.opt.ok{background:var(--g4);border-color:var(--g4);color:var(--cr)}
+.opt.no{background:var(--p3);border-color:var(--p3);color:rgba(14,44,34,.6);text-decoration:line-through}
+.fb{margin-top:14px;font-size:16px;line-height:1.5;color:var(--g5)}
+.score{font-family:var(--s);font-weight:700;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--g4);margin-top:6px}
+/* VII final */
+.bgm .kick{color:var(--g2)}
+.bgm .h2{color:var(--cr)}
+.bgm .lead{color:rgba(238,246,225,.86)}
+.route{margin-top:56px;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:28px;counter-reset:r}
+.route li{list-style:none;counter-increment:r;display:flex;flex-direction:column;gap:10px;padding-top:18px;border-top:2px solid var(--g3)}
+.route li::before{content:"0" counter(r);font-family:var(--d);font-weight:800;font-size:40px;line-height:1;color:var(--g2)}
+.route h3{font-size:17px;line-height:1.2;text-transform:uppercase;color:var(--cr)}
+.route p{font-size:16px;color:rgba(238,246,225,.8)}
+.endc{margin-top:96px;text-align:center}
+.endc .t{font-family:var(--d);font-size:clamp(24px,3.6vw,48px);line-height:1.1;text-transform:uppercase;color:var(--cr)}
+.endc .s{font-family:var(--s);font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--g2);font-size:13px;margin-top:14px}
+@media(prefers-reduced-motion:reduce){.scene svg{transform:none!important}.lvls button,.peak ul,.opt{transition:none}html{scroll-behavior:auto}}
+@media(max-width:980px){.peaks{grid-template-columns:repeat(2,minmax(0,1fr))}.route{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.climb{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.step:nth-child(n){min-height:0;border-radius:6px}.climb-base{display:none}
+.cmp .hd{display:none}.cmp .row{grid-template-columns:1fr;gap:6px}.cmp .ar{display:none}
+.ls .row{grid-template-columns:1fr;gap:6px;margin-bottom:10px}.ls .hd{display:none}
+.qs li{grid-template-columns:56px minmax(0,1fr);gap:14px}.qs b{font-size:32px}}
+@media(max-width:520px){.peaks,.climb,.route{grid-template-columns:1fr}.lvls button{padding:11px 16px;font-size:12px}}
+</style>
+
+<header class="hero" id="top">
+<div class="scene" id="scene" aria-hidden="true"><div class="top">Лідерство</div><div class="grain"></div></div>
+<div class="tblock">
+<p class="pre">Курс для керівників команд<small>представляє</small></p>
+<h1>Управління командою</h1>
+<p class="sub">Фортеця, яку будують разом</p>
+<p class="credits"><span><small>Формат</small>курс · 7 модулів</span><span><small>Тривалість</small>40 хвилин</span><span><small>Теми</small>ціль, ролі, довіра, комунікація, делегування, розвиток</span><span><small>Модель</small>стадії Такмана, ситуаційне лідерство</span><span><small>Для</small>тімлідів, нових керівників, PM</span></p>
+</div>
+</header>
+
+<div class="hz" data-a="#123A2C" data-b="#F7F1E6"></div>
+
+<section class="sec bg1" id="s1">
+<div class="w">
+<p class="kick">I · Огляд фортеці</p>
+<h2 class="h2">Команду не призначають. Її збирають.</h2>
+<p class="lead">Група людей стає командою, коли в неї з’являються спільна ціль, ясні ролі та довіра. Різницю видно в щоденних дрібницях.</p>
+<div class="cmp">
+<div class="hd"><span>Група</span><span></span><span>Команда</span></div>
+<div class="row"><p class="ev">Кожен відповідає лише за свою частину.</p><span class="ar">→</span><p class="ind">Усі однаково називають спільну ціль</p></div>
+<div class="row"><p class="ev">Уся інформація йде через керівника.</p><span class="ar">→</span><p class="ind">Люди домовляються напряму</p></div>
+<div class="row"><p class="ev">Помилки приховують до останнього.</p><span class="ar">→</span><p class="ind">Про помилки говорять на ретро без пошуку винних</p></div>
+<div class="row"><p class="ev">Коли керівник у відпустці, робота стоїть.</p><span class="ar">→</span><p class="ind">Команда тримає темп без керівника</p></div>
+</div>
+</div>
+</section>
+
+<div class="hz" data-a="#F7F1E6" data-b="#E8F2D8"></div>
+
+<section class="sec bg2" id="s2">
+<div class="w">
+<p class="kick">II · П’ять веж</p>
+<h2 class="h2">На чому тримається команда</h2>
+<p class="lead">Кожна команда проходить чотири стадії розвитку. Оберіть стадію, щоб побачити, що керівник робить для кожної з п’яти веж.</p>
+<div class="lvls" id="lvls" role="group" aria-label="Стадія розвитку команди">
+<button type="button" data-l="0" aria-pressed="true">Формування</button>
+<button type="button" data-l="1" aria-pressed="false">Шторм</button>
+<button type="button" data-l="2" aria-pressed="false">Норми</button>
+<button type="button" data-l="3" aria-pressed="false">Злагодженість</button>
+</div>
+<p class="stage-note" id="stageNote" aria-live="polite"></p>
+<div class="peaks" id="peaks"></div>
+</div>
+</section>
+
+<div class="hz" data-a="#E8F2D8" data-b="#F7F1E6"></div>
+
+<section class="sec bg1" id="s3">
+<div class="w">
+<p class="kick">III · Підйом</p>
+<h2 class="h2">Чотири висоти делегування</h2>
+<p class="lead">Стиль керівництва залежить від того, наскільки людина вміє робити конкретну задачу і наскільки впевнена в собі. Приклади нижче про одну задачу: щомісячний звіт для клієнта.</p>
+<div class="climb">
+<div class="step"><b>1</b><span class="alt">Біля підніжжя</span><h3>Вказувати</h3><p>Людина нова в задачі. Даєте чіткі кроки й часто перевіряєте.</p><p class="ex">«Ось шаблон звіту. Перший зробимо разом.»</p></div>
+<div class="step"><b>2</b><span class="alt">На схилі</span><h3>Навчати</h3><p>Бажання є, досвіду мало. Пояснюєте, чому саме так, і радитесь.</p><p class="ex">«Як би ти побудував звіт? Ось що я б додав.»</p></div>
+<div class="step"><b>3</b><span class="alt">На плато</span><h3>Підтримувати</h3><p>Досвід є, впевненості бракує. Питаєте й підбадьорюєте, рішення за людиною.</p><p class="ex">«Ти знаєш, як це зробити. Що тобі потрібно від мене?»</p></div>
+<div class="step"><b>4</b><span class="alt">На вершині</span><h3>Делегувати</h3><p>Досвід і впевненість. Передаєте результат разом із правом рішення.</p><p class="ex">«Звіт твій. Покажи, коли буде готовий.»</p></div>
+</div>
+<div class="climb-base"></div>
+<p class="climb-note">Одна людина може бути на вершині в одній задачі й біля підніжжя в іншій</p>
+</div>
+</section>
+
+<div class="hz" data-a="#F7F1E6" data-b="#D3E9BE"></div>
+
+<section class="sec bg3" id="s4">
+<div class="w">
+<p class="kick">IV · Світло і тінь</p>
+<h2 class="h2">Кожна звичка керівника має тінь</h2>
+<p class="lead">Команда копіює те, що робить керівник, а не те, що він каже. Ось як одна й та сама ситуація виглядає з двох боків.</p>
+<div class="ls">
+<div class="hd"><span>Світло</span><span>Тінь</span></div>
+<div class="row"><div class="lt">Ставить задачу з очікуваним результатом і терміном.</div><div class="sh">Каже «зроби якнайшвидше» і чекає, що всі зрозуміють.</div></div>
+<div class="row"><div class="lt">Хвалить публічно, критикує наодинці.</div><div class="sh">Розбирає помилку людини на загальному дзвінку.</div></div>
+<div class="row"><div class="lt">Питає «що заважає?», коли команда відстає.</div><div class="sh">Питає «хто винен?», коли команда відстає.</div></div>
+<div class="row"><div class="lt">Делегує результат разом із правом ухвалювати рішення.</div><div class="sh">Делегує задачу, а потім переробляє її сам.</div></div>
+<div class="row"><div class="lt">Переносить 1:1, якщо горить, і проводить того ж тижня.</div><div class="sh">Скасовує 1:1 щоразу, коли щось горить.</div></div>
+</div>
+</div>
+</section>
+
+<div class="hz" data-a="#D3E9BE" data-b="#F7F1E6"></div>
+
+<section class="sec bg1" id="s5">
+<div class="w">
+<p class="kick">V · Розмова біля вогню</p>
+<h2 class="h2">Чотири питання для зустрічі один на один</h2>
+<p class="lead">1:1 потрібен, щоб почути людину, а не щоб дізнатися статус задач. Статус можна прочитати в трекері.</p>
+<div class="qs"><ol>
+<li><b>01</b><p>Що зараз забирає в тебе найбільше енергії?</p></li>
+<li><b>02</b><p>Що я можу робити інакше, щоб тобі було легше працювати?</p></li>
+<li><b>03</b><p>Чого ти хочеш навчитися за наступні пів року?</p></li>
+<li><b>04</b><p>Яке рішення в команді ти ухвалив би інакше?</p></li>
+</ol></div>
+<div class="tip"><i></i><p>Говоріть менше третини часу. Ця зустріч належить людині, а не вашому порядку денному.</p></div>
+</div>
+</section>
+
+<div class="hz" data-a="#F7F1E6" data-b="#E8F2D8"></div>
+
+<section class="sec bg2" id="s6">
+<div class="w">
+<p class="kick">VI · Перевірка спорядження</p>
+<h2 class="h2">Три ситуації з реальної роботи</h2>
+<p class="lead">Оберіть, як би ви діяли. Після відповіді з’явиться пояснення.</p>
+<p class="score" id="score" aria-live="polite">Відповідей: 0 з 3</p>
+<div class="quiz" id="quiz"></div>
+</div>
+</section>
+
+<div class="hz" data-a="#E8F2D8" data-b="#123A2C"></div>
+
+<section class="sec bgm" id="s7">
+<div class="w">
+<p class="kick">VII · Спуск у долину</p>
+<h2 class="h2">Ваш маршрут на наступний місяць</h2>
+<p class="lead">Команда змінюється від того, що керівник робить щотижня. Почніть з чотирьох кроків.</p>
+<ol class="route">
+<li><h3>Проведіть 1:1 з кожним</h3><p>По 30 хвилин. Використайте питання з розділу V.</p></li>
+<li><h3>Запишіть ціль одним реченням</h3><p>Попросіть кожного назвати ціль команди і порівняйте відповіді.</p></li>
+<li><h3>Делегуйте одну задачу</h3><p>Оберіть висоту з розділу III і скажіть людині, яку саме.</p></li>
+<li><h3>Проведіть ретро без винних</h3><p>Питання одне: що нам заважало і що змінимо наступного разу.</p></li>
+</ol>
+<div class="endc"><p class="t">Фортеця, яку будують разом</p><p class="s">Управління командою · курс для керівників</p></div>
+</div>
+</section>
+
+<script>
+const rnd=s=>()=>{s=(s*9301+49297)%233280;return s/233280};
+const f=n=>n.toFixed(1);
+function ridge(seed,{gy,n,hMin,hMax,wMin,wMax,spire=0,W=1440,H=700,jit=18}){const r=rnd(seed);let d=`M0,${H} L0,${f(gy)}`;let last=-60;
+for(let i=0;i<n;i++){const slot=W/n,x=i*slot+r()*slot*.6,w=wMin+r()*(wMax-wMin),h=hMin+r()*(hMax-hMin),g=gy+(r()-.5)*jit;if(x<last)continue;
+d+=` L${f(x)},${f(g)}`;
+if(r()<spire){d+=` L${f(x+w*.32)},${f(g-h*.55)} L${f(x+w*.46)},${f(g-h)} L${f(x+w*.56)},${f(g-h*.9)} L${f(x+w*.66)},${f(g-h*.5)} L${f(x+w)},${f(g)}`}
+else{const c=w*(.12+r()*.28);d+=` L${f(x+w*.2)},${f(g-h*.42)} L${f(x+w*.28)},${f(g-h*.78)} L${f(x-c*.3)},${f(g-h*.86)} L${f(x-c)},${f(g-h*.97)} L${f(x+w*.3)},${f(g-h)} L${f(x+w+c)},${f(g-h*.96)} L${f(x+w+c*.3)},${f(g-h*.86)} L${f(x+w*.72)},${f(g-h*.78)} L${f(x+w*.8)},${f(g-h*.42)} L${f(x+w)},${f(g)}`}
+d+=` L${f(x+w+20+r()*40)},${f(gy+(r()-.5)*jit)}`;last=x+w+20}
+return d+` L${W},${f(gy)} L${W},${H} Z`}
+
+/* hero scene */
+const scene=document.getElementById('scene');
+const V='viewBox="0 0 1440 700" preserveAspectRatio="xMidYMax slice"';
+/* citadel on a rock, like the poster's castle */
+const citadel=c=>`<g fill="${c}">
+<path d="M500,700 L548,560 L585,500 L612,430 L648,382 L690,352 L742,338 L800,346 L846,372 L872,420 L902,468 L930,540 L975,700 Z"/>
+<rect x="650" y="268" width="196" height="86"/>
+<rect x="628" y="214" width="34" height="140"/><path d="M628,214 h7 v-10 h7 v10 h6 v-10 h7 v10 h7 v-6 h-34 z"/>
+<rect x="830" y="244" width="30" height="110"/><path d="M830,244 h6 v-9 h6 v9 h6 v-9 h6 v9 h6 v-5 h-30 z"/>
+<rect x="702" y="226" width="96" height="44"/><path d="M706,228 A44,44 0 0 1 794,228 Z"/>
+<rect x="743" y="128" width="14" height="60"/><path d="M743,128 L750,108 L757,128 Z"/>
+<rect x="672" y="244" width="16" height="26"/></g>
+<g fill="#EEF7E0" opacity=".35"><rect x="640" y="236" width="6" height="12" rx="3"/><rect x="641" y="262" width="5" height="10" rx="2.5"/><rect x="842" y="262" width="5" height="10" rx="2.5"/><rect x="720" y="246" width="6" height="14" rx="3"/><rect x="747" y="246" width="6" height="14" rx="3"/><rect x="774" y="246" width="6" height="14" rx="3"/><rect x="700" y="296" width="5" height="10" rx="2.5"/><rect x="790" y="300" width="5" height="10" rx="2.5"/></g>`;
+/* a small team standing on the foreground ridge */
+const person=(x,y,s)=>`<g transform="translate(${x} ${y}) scale(${s})"><circle cx="0" cy="-74" r="11"/><path d="M-15,-60 Q0,-66 15,-60 L19,-28 L14,-26 L13,0 L-13,0 L-14,-26 L-19,-28 Z"/></g>`;
+const L=[
+{k:.42,svg:`<path d="${ridge(11,{gy:470,n:9,hMin:90,hMax:320,wMin:30,wMax:80,spire:.6})}" fill="#B8E39C"/>`},
+{k:.32,svg:`<path d="${ridge(48,{gy:520,n:7,hMin:90,hMax:260,wMin:50,wMax:120,spire:.4})}" fill="#97D383"/>`},
+{k:.26,svg:citadel('#6CBF72')},
+{k:.2,svg:`<path d="${ridge(85,{gy:585,n:5,hMin:80,hMax:200,wMin:70,wMax:150,spire:.3})}" fill="#4FA764"/>`},
+{k:.12,svg:`<path d="${ridge(122,{gy:630,n:4,hMin:60,hMax:170,wMin:90,wMax:170,spire:.2})}" fill="#2F8352"/>`},
+{k:.06,svg:`<path d="${ridge(159,{gy:662,n:3,hMin:80,hMax:180,wMin:200,wMax:320})}" fill="#1E5E40"/>`},
+{k:0,svg:`<path d="M0,700 L0,640 C120,618 220,606 330,612 C420,618 470,640 560,656 C760,690 1100,672 1440,660 L1440,700 Z" fill="#123A2C"/><g fill="#123A2C">${person(160,622,1.05)+person(214,616,1.18)+person(266,618,.98)+person(312,624,1.08)}</g>`}];
+let sv=`<svg ${V} style="z-index:0"><g fill="none" stroke="#F7FCEF" stroke-linecap="round" opacity=".8"><path d="M470,70 C560,50 640,92 760,66 S960,40 1030,74" stroke-width="10"/><path d="M560,104 C660,90 760,124 880,102 S1040,84 1120,110" stroke-width="6"/><path d="M420,132 C500,124 560,140 640,130" stroke-width="4"/></g>
+<g transform="translate(1040 300)"><circle r="60" fill="#F3FBE6" opacity=".85"/><circle r="116" fill="none" stroke="#F3FBE6" stroke-width="18" opacity=".24"/><circle r="182" fill="none" stroke="#F3FBE6" stroke-width="14" opacity=".14"/><circle r="256" fill="none" stroke="#F3FBE6" stroke-width="10" opacity=".08"/></g>
+<g fill="none" stroke="#2C7F4F" stroke-width="2.2" stroke-linecap="round">${[[300,170,1],[332,186,.8],[360,160,.9],[388,192,.7],[418,176,.85],[450,198,.6]].map(([x,y,s])=>`<path transform="translate(${x} ${y}) scale(${s})" d="M-9,0 Q-4,-6 0,0 Q4,-6 9,0"/>`).join('')}</g></svg>`;
+L.forEach((l,i)=>{sv+=`<svg ${V} data-k="${l.k}" style="z-index:${i+1}">${l.svg}</svg>`});
+scene.insertAdjacentHTML('beforeend',sv);
+const lay=[...scene.querySelectorAll('svg[data-k]')],rm=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function par(){if(rm)return;const y=Math.min(scrollY,innerHeight);lay.forEach(s=>s.style.transform=`translateY(${(y*+s.dataset.k).toFixed(1)}px)`)}
+addEventListener('scroll',par,{passive:true});par();
+
+/* wavy dividers */
+document.querySelectorAll('.hz').forEach((el,i)=>{const A=el.dataset.a,B=el.dataset.b,ph=i*.9,amp=14,base=60;el.style.background=A;
+let d='M0,'+(base+Math.sin(ph)*amp).toFixed(1);for(let x=40;x<=1440;x+=40){d+=' L'+x+','+(base+Math.sin(ph+x/1440*Math.PI*2)*amp).toFixed(1)}
+el.innerHTML='<svg viewBox="0 0 1440 100" preserveAspectRatio="none" aria-hidden="true"><path d="'+d+' L1440,100 L0,100Z" fill="'+B+'"/></svg>'});
+
+/* towers */
+const STAGE=['Люди ввічливі й обережні, чекають напрямку від керівника.','Відкриваються розбіжності, з’являються конфлікти. Це нормальна стадія.','Команда домовилась про правила й почала їх тримати.','Команда працює сама. Керівник більше дивиться вперед, ніж всередину.'];
+const COMP=[
+['Ціль',[['Пояснює, навіщо команда існує і що буде успіхом','Формулює ціль на квартал одним реченням'],['Повертає суперечки до спільної цілі','Чесно пояснює, які пріоритети змінились і чому'],['Разом з командою розбиває ціль на вимірювані результати','Щомісяця звіряє, чи рухаємось у потрібний бік'],['Дає команді самій пропонувати цілі','Пов’язує роботу команди зі стратегією компанії']]],
+['Ролі',[['Описує, хто за що відповідає','Знайомить людей із сильними сторонами одне одного'],['Розводить перетин зон відповідальності','Фіксує, хто яке рішення ухвалює'],['Переглядає ролі, коли змінюється обсяг роботи','Дає людям пробувати суміжні ролі'],['Ротує ролі для розвитку','Дозволяє команді розподіляти задачі самостійно']]],
+['Довіра',[['Першим говорить про власні помилки','Вчасно виконує навіть дрібні обіцянки'],['Розбирає конфлікт по суті, а не по особах','Захищає людину, яка висловила незручну думку'],['Проводить ретро без пошуку винних','Дає автономію там, де людина довела надійність'],['Тримає довіру під тиском дедлайнів','Делегує рішення з реальними наслідками']]],
+['Комунікація',[['Домовляється про канали і час відповіді','Запускає регулярні 1:1'],['Виносить напругу на зустріч, а не в кулуари','Вислуховує всі сторони, перш ніж вирішити'],['Записує рішення в одному доступному місці','Скорочує зустрічі, які не дають рішень'],['Виходить із ланцюжків, де команда домовляється сама','Приносить команді контекст від керівництва']]],
+['Розвиток',[['Обговорює з кожним цілі на пів року','Дає перший зворотний зв’язок у перші два тижні'],['Вчить команду давати зворотний зв’язок одне одному','Помічає, кому зараз важко, і говорить про це'],['Складає план розвитку з кожним','Публічно відзначає конкретні досягнення'],['Вирощує наступника','Дає сильним людям задачі на межі можливостей']]]];
+const PC=['#A9DD8C','#73C477','#45A462','#2C7F4F','#1D5E3E'];
+const peaks=document.getElementById('peaks');
+peaks.innerHTML=COMP.map(([n],i)=>{
+const c=PC[i],light=i<2,ink=light?'#123A2C':'#0E2C22',glow=light?'#F7F1E6':'#A9DD8C',h=[70,92,104,84,98][i],tx=100,top=150-h;
+let rings='';[110,82,56].forEach((rr,k)=>rings+=`<circle cx="${tx}" cy="150" r="${rr}" fill="none" stroke="${light?'#123A2C':'#EEF6E1'}" stroke-width="${8-k*2}" opacity="${.08+k*.07}"/>`);
+const tower=`<g fill="${ink}" opacity="${light?.85:.9}"><rect x="${tx-16}" y="${top}" width="32" height="${h}"/><path d="M${tx-20},${top} h8 v-8 h8 v8 h8 v-8 h8 v8 h8 v6 h-40 z"/><rect x="${tx-44}" y="${150-h*.45}" width="88" height="${h*.45}"/><path d="M${tx-48},${150-h*.45} h8 v-7 h8 v7 h8 v-7 h8 v7 h8 v-7 h8 v7 h8 v-7 h8 v7 h8 v-7 h8 v7 h8 v5 h-96 z"/></g><rect x="${tx-3}" y="${top+12}" width="6" height="12" rx="3" fill="${glow}"/>`;
+return`<article class="peak"><div class="top" style="background:${c}"><svg viewBox="0 0 200 150" preserveAspectRatio="xMidYMax slice" aria-hidden="true">${rings}<circle cx="${tx+46}" cy="${34+i*5}" r="14" fill="${glow}" opacity=".9"/>${tower}<path d="M${24+i*6},${30+i*6} q12,-7 24,0 t24,0" fill="none" stroke="#F7FCEF" stroke-width="3" stroke-linecap="round" opacity=".75"/></svg><div class="grain"></div></div><div class="body"><span class="n">0${i+1}</span><h3>${n}</h3><ul></ul></div></article>`}).join('');
+const note=document.getElementById('stageNote');
+function fill(l){peaks.querySelectorAll('ul').forEach((u,i)=>u.innerHTML=COMP[i][1][l].map(t=>`<li>${t}</li>`).join(''));note.textContent=STAGE[l]}
+function setL(l){document.querySelectorAll('#lvls button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.l===l));
+const uls=peaks.querySelectorAll('ul');uls.forEach(u=>u.classList.add('fade'));setTimeout(()=>{fill(l);uls.forEach(u=>u.classList.remove('fade'))},rm?0:180)}
+document.getElementById('lvls').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setL(+b.dataset.l)});
+fill(0);
+
+/* quiz */
+const QZ=[
+{q:'У команду прийшла нова людина. Вона дуже вмотивована, але ще жодного разу не робила звіт для клієнта. Який стиль оберете?',o:['Делегувати','Підтримувати','Вказувати'],a:2,e:'Ентузіаст без досвіду потребує чітких кроків і частих перевірок. Делегування тут виглядатиме як «кинули в воду».'},
+{q:'Двоє колег гостро сперечаються про архітектуру просто на загальному дзвінку. Ваш перший крок?',o:['Перевести суперечку в особисті повідомлення','Повернути розмову до цілі й погодити критерії рішення','Швидко ухвалити рішення самому'],a:1,e:'Спільні критерії переводять конфлікт з «хто правий» на «що краще для цілі». Рішення ухвалюєте після того, як почули обидві сторони.'},
+{q:'Команда втретє поспіль не закриває спринт. Що спитаєте на ретро?',o:['Хто не встиг свою частину?','Що нам заважало цього разу?','Чому ми знову не впорались?'],a:1,e:'Питання про перешкоди дає факти і варіанти. Питання про винних дає мовчання.'}];
+const quiz=document.getElementById('quiz'),score=document.getElementById('score');let done=0,right=0;
+quiz.innerHTML=QZ.map((x,i)=>`<div class="q" data-i="${i}"><p class="qn">Ситуація ${i+1}</p><h3>${x.q}</h3><div class="opts" role="group" aria-label="Варіанти відповіді">${x.o.map((t,j)=>`<button type="button" class="opt" id="q${i}o${j}" data-j="${j}">${t}</button>`).join('')}</div><p class="fb" aria-live="polite"></p></div>`).join('');
+quiz.addEventListener('click',e=>{const b=e.target.closest('.opt');if(!b)return;const card=b.closest('.q');if(card.dataset.done)return;
+const i=+card.dataset.i,j=+b.dataset.j,x=QZ[i];card.dataset.done=1;done++;if(j===x.a)right++;
+card.querySelectorAll('.opt').forEach((o,k)=>{if(k===x.a)o.classList.add('ok');else if(k===j)o.classList.add('no');o.setAttribute('aria-disabled','true')});
+card.querySelector('.fb').textContent=(j===x.a?'Так. ':'Краще інакше. ')+x.e;
+score.textContent=done<3?`Відповідей: ${done} з 3`:`Результат: ${right} з 3 правильних`});
+</script>
