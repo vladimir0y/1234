@@ -1,0 +1,378 @@
+<title>Проблем-солвінг</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap&subset=cyrillic">
+<style>
+/* Layout: double-exposure poster longread — an owl silhouette filled with a lime→forest city where a hexagon puzzle hangs over a small figure; mint chapters alternate with deep forest. Single deliberate look. */
+:root{
+  --mint:#EAF3E2;--mint2:#DCEBD0;--paper:#F4F9EF;
+  --l1:#D7EEA8;--l2:#A8D884;--l3:#6DBD6A;--e1:#3A9A55;--e2:#1F7344;
+  --f1:#14522F;--forest:#0F3321;--forest2:#174429;--ink:#10291B;--soft:#4E6B57;--on:#E9F5DF;
+  --d:"Unbounded",system-ui,sans-serif;--s:"JetBrains Mono",ui-monospace,monospace;--b:"IBM Plex Sans",system-ui,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--mint);color:var(--ink);font-family:var(--b);font-size:18px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+h1,h2,h3{font-family:var(--d);font-weight:800;margin:0;text-wrap:balance}
+p{margin:0;text-wrap:pretty}
+button{font:inherit;color:inherit}
+.w{max-width:1160px;margin:0 auto;padding-left:max(clamp(16px,4vw,40px),env(safe-area-inset-left,0px));padding-right:max(clamp(16px,4vw,40px),env(safe-area-inset-right,0px));position:relative;z-index:2}
+.kick{font-family:var(--s);font-size:13px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--e2)}
+.h2{font-size:clamp(26px,4vw,54px);line-height:1.08;text-transform:uppercase;color:var(--forest);margin-top:18px;max-width:18ch}
+.lead{margin-top:24px;font-size:clamp(18px,1.5vw,21px);line-height:1.6;max-width:38rem}
+.sec{position:relative;padding-block:clamp(56px,7vw,104px) clamp(64px,8vw,120px)}
+.bgm{background:var(--mint)}.bgp{background:var(--paper)}.bgf{background:var(--forest);color:var(--on)}
+.bgf .kick{color:var(--l2)}.bgf .h2{color:var(--on)}.bgf .lead{color:rgba(233,245,223,.84)}
+button:focus-visible{outline:3px solid var(--l3);outline-offset:3px}
+/* hero */
+.hero{background:var(--mint)}
+.poster{max-width:720px;margin:0 auto;padding:clamp(20px,4vw,48px) max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));position:relative}
+.poster svg{display:block;width:100%;height:auto}
+.poster .top{position:absolute;top:clamp(28px,5vw,56px);left:0;right:0;text-align:center;font-family:var(--s);font-weight:700;font-size:clamp(12px,1.5vw,18px);letter-spacing:.5em;padding-left:.5em;text-transform:uppercase;color:var(--e2);z-index:2}
+.tblock{background:var(--forest);text-align:center;padding:clamp(36px,5vw,64px) max(16px,env(safe-area-inset-right,0px)) clamp(36px,4vw,56px) max(16px,env(safe-area-inset-left,0px));color:var(--on)}
+.tblock .pre{font-family:var(--s);font-weight:700;font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:var(--l2)}
+.tblock .pre small{display:block;font-size:.7em;margin-top:4px}
+.tblock h1{font-size:clamp(30px,6vw,84px);line-height:1.04;text-transform:uppercase;margin-top:18px}
+.tblock .sub{font-family:var(--s);font-weight:700;font-size:clamp(12px,1.3vw,16px);letter-spacing:.32em;text-transform:uppercase;color:var(--l3);margin-top:14px}
+.credits{max-width:860px;margin:36px auto 0;font-family:var(--s);font-weight:700;text-transform:uppercase;font-size:13px;line-height:1.9;color:var(--l2);letter-spacing:.06em}
+.credits small{font-size:.78em;font-weight:400;margin-right:.35em;color:var(--l3)}
+.credits span{margin-right:.7em}
+/* feathered dividers */
+.fe{position:relative;height:clamp(56px,7vw,96px);margin:-1px 0;overflow:hidden}
+.fe svg{position:absolute;inset:0;width:100%;height:100%}
+/* I compare */
+.cmp{margin-top:56px;display:flex;flex-direction:column}
+.cmp .hd,.cmp .row{display:grid;grid-template-columns:minmax(0,.8fr) 48px minmax(0,1.2fr);gap:16px;align-items:baseline}
+.cmp .hd{font-family:var(--s);font-weight:700;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--e2);padding-bottom:14px;border-bottom:2px solid var(--forest)}
+.cmp .row{padding:22px 0;border-bottom:1px solid rgba(15,51,33,.16)}
+.cmp .ev{font-family:var(--d);font-size:clamp(16px,1.6vw,22px);line-height:1.2;text-transform:uppercase;color:var(--soft)}
+.cmp .ar{font-family:var(--d);font-size:24px;color:var(--l3);line-height:1}
+.cmp .ind{font-size:19px;line-height:1.5;color:var(--ink)}
+.cmp .ind b{font-weight:600;color:var(--e2)}
+.formula{margin-top:32px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-family:var(--s);font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.formula span{padding:8px 14px;border-radius:999px;background:var(--l1);color:var(--forest)}
+.formula em{font-style:normal;color:var(--soft)}
+/* II stages */
+.lvls{display:flex;flex-wrap:wrap;gap:8px;margin-top:40px}
+.lvls button{font-family:var(--d);font-weight:800;font-size:13px;letter-spacing:.04em;text-transform:uppercase;padding:13px 22px;border-radius:999px;border:2px solid var(--l2);background:transparent;cursor:pointer;color:var(--on);transition:background .2s,color .2s}
+.lvls button[aria-pressed="true"]{background:var(--l2);color:var(--forest)}
+.lvls button:hover{background:rgba(168,216,132,.14)}
+.lvls button[aria-pressed="true"]:hover{background:var(--l2)}
+.note{margin-top:18px;font-size:16px;color:var(--l1);min-height:1.6em}
+.stages{margin-top:28px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
+.stg{display:flex;flex-direction:column;background:var(--forest2);border-radius:10px;overflow:hidden}
+.stg .top{aspect-ratio:1/1;max-width:100%}
+.stg .top svg{display:block;width:100%;height:100%}
+.stg .body{padding:4px 18px 22px;flex:1;display:flex;flex-direction:column;gap:8px}
+.stg .n{font-family:var(--s);font-weight:700;font-size:12px;letter-spacing:.2em;color:var(--l2)}
+.stg h3{font-size:17px;line-height:1.15;text-transform:uppercase;color:var(--on)}
+.stg .tool{font-family:var(--s);font-size:12px;color:var(--l3)}
+.stg p.c{font-size:16px;line-height:1.45;color:rgba(233,245,223,.88);transition:opacity .25s;margin-top:4px}
+.stg p.c.fade{opacity:0}
+/* III five whys */
+.why{margin-top:48px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;align-items:end}
+.wst{display:flex;flex-direction:column;gap:8px;padding:18px 16px 20px;border-radius:6px 6px 0 0;transition:background .3s,color .3s}
+.wst b{font-family:var(--s);font-weight:700;font-size:11px;letter-spacing:.2em;text-transform:uppercase;opacity:.8}
+.wst p{font-size:15px;line-height:1.45}
+.wst.off{background:repeating-linear-gradient(135deg,var(--mint2) 0 8px,var(--paper) 8px 16px);color:var(--soft)}
+.wst.off p{font-family:var(--d);font-size:22px}
+.why-base{height:16px;background:var(--forest);border-radius:0 0 6px 6px}
+.why-ctl{margin-top:22px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.btn{font-family:var(--d);font-weight:800;font-size:13px;text-transform:uppercase;padding:14px 24px;border-radius:999px;border:2px solid var(--forest);background:var(--forest);color:var(--on);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--forest)}
+.btn[disabled]{opacity:.4;cursor:default}
+.why-note{font-family:var(--s);font-weight:700;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--e2)}
+/* IV fishbone */
+.fish{margin-top:48px;overflow-x:auto;background:var(--paper);border-radius:10px;padding:clamp(12px,2vw,24px)}
+.fish svg{display:block;width:100%;min-width:760px;height:auto}
+.fish-note{margin-top:18px;font-size:16px;color:var(--soft);max-width:44rem}
+/* V matrix */
+.mx{margin-top:48px;display:grid;grid-template-columns:28px minmax(0,1fr);grid-template-rows:minmax(0,1fr) 28px;gap:8px}
+.mx .ya{writing-mode:vertical-rl;transform:rotate(180deg);font-family:var(--s);font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:rgba(233,245,223,.7);text-align:center}
+.mx .xa{grid-column:2;font-family:var(--s);font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:rgba(233,245,223,.7);text-align:center}
+.quad{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.q4{border-radius:8px;padding:22px;display:flex;flex-direction:column;gap:12px;min-height:200px}
+.q4 h3{font-size:16px;text-transform:uppercase}
+.q4 .tag{font-family:var(--s);font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;opacity:.75}
+.q4 ul{margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:6px}
+.q4 li{font-size:15px;line-height:1.35;padding:7px 12px;border-radius:999px}
+.q4 p{font-size:15px;line-height:1.45;margin-top:auto}
+.qa{background:var(--l2);color:var(--forest)}.qa li{background:var(--paper)}
+.qb{background:var(--e1);color:var(--on)}.qb li{background:rgba(233,245,223,.18)}
+.qc{background:var(--forest2);color:var(--on)}.qc li{background:rgba(233,245,223,.1)}
+.qd{background:#2A1F17;color:#F2E4D6}.qd li{background:rgba(242,228,214,.12)}
+/* VI traps */
+.ls{margin-top:56px;display:flex;flex-direction:column;gap:12px}
+.ls .hd,.ls .row{display:grid;grid-template-columns:200px minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:stretch}
+.ls .hd span{font-family:var(--s);font-weight:700;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--e2)}
+.ls .nm{font-family:var(--d);font-size:15px;line-height:1.25;text-transform:uppercase;color:var(--forest);padding-top:22px}
+.ls .row>div{padding:20px 22px;font-size:17px;line-height:1.5;border-radius:6px}
+.ls .lt{background:var(--l1)}
+.ls .sh{background:var(--f1);color:var(--on)}
+/* VII quiz */
+.score{font-family:var(--s);font-weight:700;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--e2);margin-top:28px}
+.quiz{margin-top:20px;display:flex;flex-direction:column;gap:18px}
+.qz{background:var(--paper);border-radius:10px;padding:clamp(20px,3vw,32px)}
+.qz .qn{font-family:var(--s);font-weight:700;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--e2)}
+.qz h3{font-family:var(--b);font-weight:600;font-size:clamp(18px,1.8vw,22px);line-height:1.35;color:var(--forest);margin-top:8px}
+.opts{margin-top:18px;display:flex;flex-wrap:wrap;gap:8px}
+.opt{text-align:left;font-size:16px;line-height:1.35;padding:12px 18px;border-radius:999px;border:2px solid rgba(15,51,33,.3);background:transparent;color:var(--forest);cursor:pointer}
+.opt:hover{border-color:var(--forest)}
+.opt.ok{background:var(--e2);border-color:var(--e2);color:var(--on)}
+.opt.no{background:var(--mint2);border-color:var(--mint2);color:var(--soft);text-decoration:line-through}
+.fb{margin-top:14px;font-size:16px;line-height:1.5;color:var(--e2)}
+/* VIII route */
+.route{margin-top:56px;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:28px;counter-reset:r}
+.route li{list-style:none;counter-increment:r;display:flex;flex-direction:column;gap:10px;padding-top:18px;border-top:2px solid var(--l3)}
+.route li::before{content:"0" counter(r);font-family:var(--d);font-weight:800;font-size:40px;line-height:1;color:var(--l2)}
+.route h3{font-size:17px;line-height:1.2;text-transform:uppercase;color:var(--on)}
+.route p{font-size:16px;color:rgba(233,245,223,.8)}
+.endc{margin-top:80px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.endc .fig{width:min(240px,56vw)}.endc .fig svg{display:block;width:100%;height:auto}
+.endc .t{font-family:var(--d);font-size:clamp(24px,3.6vw,48px);line-height:1.1;text-transform:uppercase;margin-top:16px}
+.endc .s{font-family:var(--s);font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--l3);font-size:13px;margin-top:14px}
+@media(prefers-reduced-motion:reduce){.stg p.c,.wst,.lvls button{transition:none}html{scroll-behavior:auto}}
+@media(max-width:980px){.stages{grid-template-columns:repeat(2,minmax(0,1fr))}.route{grid-template-columns:repeat(2,minmax(0,1fr))}.why{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.wst{border-radius:6px;min-height:0!important}.why-base{display:none}}
+@media(max-width:760px){.cmp .hd{display:none}.cmp .row{grid-template-columns:1fr;gap:6px}.cmp .ar{display:none}
+.ls .hd{display:none}.ls .row{grid-template-columns:1fr;gap:6px;margin-bottom:12px}.ls .nm{padding-top:0}
+.quad{grid-template-columns:1fr}.mx{grid-template-columns:1fr}.mx .ya,.mx .xa{display:none}}
+@media(max-width:520px){.stages,.route{grid-template-columns:1fr}.why{grid-template-columns:1fr}.lvls button{padding:11px 16px;font-size:12px}}
+</style>
+
+<header class="hero">
+<div class="poster" aria-hidden="true"><div class="top">Мислення</div><div id="heroArt"></div></div>
+<div class="tblock">
+<p class="pre">Курс для команд і керівників<small>представляє</small></p>
+<h1>Проблем-солвінг</h1>
+<p class="sub">Бачити корінь, а не симптом</p>
+<p class="credits"><span><small>Формат</small>курс · 8 модулів</span><span><small>Тривалість</small>50 хвилин</span><span><small>Методи</small>5 Чому, Ішикава, матриця «вплив — зусилля», PDCA</span><span><small>Для</small>тімлідів, аналітиків, PM, операційних команд</span></p>
+</div>
+</header>
+
+<div class="fe" data-a="#0F3321" data-b="#F4F9EF"></div>
+
+<section class="sec bgp">
+<div class="w">
+<p class="kick">I · Що висить над головою</p>
+<h2 class="h2">Проблема — це розрив між «є» і «має бути»</h2>
+<p class="lead">Половина невдалих рішень починається з розмитої постановки. Поки проблему не можна виміряти, її не можна і розв’язати.</p>
+<div class="cmp">
+<div class="hd"><span>Розмито</span><span></span><span>Чітко</span></div>
+<div class="row"><p class="ev">Продажі впали</p><span class="ar">→</span><p class="ind">Конверсія з демо в оплату впала <b>з 22% до 14%</b> за березень.</p></div>
+<div class="row"><p class="ev">Клієнти скаржаться</p><span class="ar">→</span><p class="ind"><b>38 звернень</b> за тиждень про повторне списання оплати.</p></div>
+<div class="row"><p class="ev">Команда не встигає</p><span class="ar">→</span><p class="ind"><b>4 з 6</b> останніх релізів вийшли із запізненням понад 3 дні.</p></div>
+<div class="row"><p class="ev">Нам потрібна нова CRM</p><span class="ar">→</span><p class="ind">Менеджери витрачають <b>2 години на день</b> на ручне внесення даних. Нова CRM тут рішення, а не проблема.</p></div>
+</div>
+<div class="formula" aria-label="Формула постановки проблеми"><span>Що</span><em>+</em><span>Де</span><em>+</em><span>Скільки</span><em>+</em><span>З якого часу</span><em>=</em><span>Проблема</span></div>
+</div>
+</section>
+
+<div class="fe" data-a="#F4F9EF" data-b="#0F3321"></div>
+
+<section class="sec bgf">
+<div class="w">
+<p class="kick">II · П’ять кроків</p>
+<h2 class="h2">Шлях від симптому до рішення</h2>
+<p class="lead">Однакові кроки для будь-якої проблеми. Оберіть кейс і подивіться, як команда проходила кожен крок.</p>
+<div class="lvls" id="lvls" role="group" aria-label="Кейс">
+<button type="button" data-l="0" aria-pressed="true">Повільна підтримка</button>
+<button type="button" data-l="1" aria-pressed="false">Зрив релізів</button>
+<button type="button" data-l="2" aria-pressed="false">Відтік клієнтів</button>
+</div>
+<p class="note" id="note" aria-live="polite"></p>
+<div class="stages" id="stages"></div>
+</div>
+</section>
+
+<div class="fe" data-a="#0F3321" data-b="#EAF3E2"></div>
+
+<section class="sec bgm">
+<div class="w">
+<p class="kick">III · Сходи до кореня</p>
+<h2 class="h2">П’ять разів «Чому?»</h2>
+<p class="lead">Перша відповідь майже завжди описує симптом. Питайте «чому?», доки не дійдете до причини, на яку можна вплинути процесом, а не людиною.</p>
+<div class="why" id="why"></div>
+<div class="why-base"></div>
+<div class="why-ctl"><button type="button" class="btn" id="whyNext">Чому?</button><button type="button" class="btn ghost" id="whyReset">Почати знову</button><span class="why-note" id="whyNote" aria-live="polite"></span></div>
+</div>
+</section>
+
+<div class="fe" data-a="#EAF3E2" data-b="#F4F9EF"></div>
+
+<section class="sec bgp">
+<div class="w">
+<p class="kick">IV · Риб’ячий скелет</p>
+<h2 class="h2">Діаграма Ішикави</h2>
+<p class="lead">Коли причин багато, розкладіть їх за шістьма категоріями. Так команда не застрягне на першій гіпотезі й побачить картину цілком.</p>
+<div class="fish" id="fish" role="img" aria-label="Діаграма Ішикави для проблеми: час першої відповіді підтримки зріс з 2 до 9 годин. Шість категорій причин: люди, процеси, інструменти, дані, середовище, вимірювання."></div>
+<p class="fish-note">Після мозкового штурму позначте 2–3 причини, які підтверджуються даними. З ними й ідіть у «5 Чому».</p>
+</div>
+</section>
+
+<div class="fe" data-a="#F4F9EF" data-b="#0F3321"></div>
+
+<section class="sec bgf">
+<div class="w">
+<p class="kick">V · Вибір стежки</p>
+<h2 class="h2">Матриця «вплив — зусилля»</h2>
+<p class="lead">Ідей рішення завжди більше, ніж ресурсів. Розставте їх за двома осями й почніть зі швидких перемог. Приклад для тієї ж проблеми з підтримкою.</p>
+<div class="mx">
+<div class="ya">Вплив ↑</div>
+<div class="quad">
+<div class="q4 qa"><span class="tag">Великий вплив · мало зусиль</span><h3>Швидкі перемоги</h3><ul><li>Шаблони для 20 типових питань</li><li>Автомаршрутизація за темою</li></ul><p>Робіть першими, цього тижня.</p></div>
+<div class="q4 qb"><span class="tag">Великий вплив · багато зусиль</span><h3>Великі ставки</h3><ul><li>Чат-бот для простих запитів</li><li>Нова база знань</li></ul><p>Плануйте як проєкт із метрикою успіху.</p></div>
+<div class="q4 qc"><span class="tag">Малий вплив · мало зусиль</span><h3>Дрібниці</h3><ul><li>Новий підпис у листах</li><li>Автовідповідь «ми отримали»</li></ul><p>Робіть між іншим або не робіть.</p></div>
+<div class="q4 qd"><span class="tag">Малий вплив · багато зусиль</span><h3>Пастки</h3><ul><li>Переїзд на іншу хелпдеск-систему</li><li>Найм п’яти людей без зміни процесу</li></ul><p>Виглядають солідно, але проблему не розв’язують.</p></div>
+</div>
+<div class="xa">Зусилля →</div>
+</div>
+</div>
+</section>
+
+<div class="fe" data-a="#0F3321" data-b="#EAF3E2"></div>
+
+<section class="sec bgm">
+<div class="w">
+<p class="kick">VI · Пастки в тумані</p>
+<h2 class="h2">П’ять пасток мислення</h2>
+<p class="lead">Розумні люди помиляються не через брак знань, а через звички мозку. Їх легше помітити, коли знаєш назву.</p>
+<div class="ls">
+<div class="hd"><span>Пастка</span><span>Світло</span><span>Тінь</span></div>
+<div class="row"><p class="nm">Стрибок до рішення</p><div class="lt">Спершу формулює проблему з цифрами.</div><div class="sh">Одразу пропонує «купити нову систему».</div></div>
+<div class="row"><p class="nm">Підтвердження</p><div class="lt">Шукає дані, які можуть спростувати гіпотезу.</div><div class="sh">Збирає лише факти, що підтверджують першу думку.</div></div>
+<div class="row"><p class="nm">Думка старшого</p><div class="lt">Рішення ухвалюють за даними, навіть якщо вони проти думки керівника.</div><div class="sh">Перемагає думка найвищого за посадою.</div></div>
+<div class="row"><p class="nm">Якір</p><div class="lt">Розглядає щонайменше три варіанти рішення.</div><div class="sh">Обговорює лише перший запропонований варіант.</div></div>
+<div class="row"><p class="nm">Вкладені зусилля</p><div class="lt">Зупиняє ініціативу, якщо дані показують, що вона не працює.</div><div class="sh">Продовжує, бо «вже стільки вклали».</div></div>
+</div>
+</div>
+</section>
+
+<div class="fe" data-a="#EAF3E2" data-b="#F4F9EF"></div>
+
+<section class="sec bgp">
+<div class="w">
+<p class="kick">VII · Перевірка</p>
+<h2 class="h2">Три ситуації з реальної роботи</h2>
+<p class="lead">Оберіть, як би ви діяли. Після відповіді з’явиться пояснення.</p>
+<p class="score" id="score" aria-live="polite">Відповідей: 0 з 3</p>
+<div class="quiz" id="quiz"></div>
+</div>
+</section>
+
+<div class="fe" data-a="#F4F9EF" data-b="#0F3321"></div>
+
+<section class="sec bgf">
+<div class="w">
+<p class="kick">VIII · Далі сам</p>
+<h2 class="h2">Чотири кроки на наступні два тижні</h2>
+<p class="lead">Метод закріплюється, коли його застосовують до реальної проблеми, а не до прикладу з курсу.</p>
+<ol class="route">
+<li><h3>Сформулюйте проблему</h3><p>За формулою «що, де, скільки, з якого часу». Покажіть колезі й перевірте, чи він зрозумів так само.</p></li>
+<li><h3>П’ять разів «Чому?»</h3><p>Пройдіть з командою на одній реальній проблемі. Зупиніться на причині в процесі, а не в людині.</p></li>
+<li><h3>Риб’ячий скелет за 30 хвилин</h3><p>Намалюйте на дошці, зберіть причини за шістьма категоріями, позначте ті, що підтверджені даними.</p></li>
+<li><h3>Перевірте тими ж цифрами</h3><p>Через два тижні поміряйте те, з чого почали. Немає змін — повертайтеся до кроку 2.</p></li>
+</ol>
+<div class="endc"><div class="fig" id="endFig" aria-hidden="true"></div><p class="t">Бачити корінь, а не симптом</p><p class="s">Проблем-солвінг · курс для команд</p></div>
+</div>
+</section>
+
+<script>
+const rnd=s=>()=>{s=(s*9301+49297)%233280;return s/233280};
+const f=n=>n.toFixed(1);
+let UID=0;
+const STOPS=[[0,'#EAF6C8'],[.3,'#C7E79B'],[.5,'#8FCB74'],[.66,'#4FA45E'],[.82,'#1F6B3E'],[1,'#0F3321']];
+const grad=(id,y0,y1)=>`<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="${y0}" x2="0" y2="${y1}">${STOPS.map(([o,c])=>`<stop offset="${o}" stop-color="${c}"/>`).join('')}</linearGradient>`;
+/* layered city: towers with finials, arches, fences, stairs */
+function city(seed,W,base,s,opt={}){const r=rnd(seed);let o='';
+const lay=[['#CDEAA0',0,1],['#9CD27E',.2,.8],['#5DAF64',.38,.6],['#2C7E48',.55,.42],['#164B2E',.72,.28]];
+lay.forEach(([c,dy,hk],li)=>{const gy=base+dy*s*320;let x=-20;o+=`<g fill="${c}"><rect x="0" y="${f(gy)}" width="${W}" height="${f(s*2000)}"/>`;
+while(x<W+20){const w=(14+r()*40)*s,h=(40+r()*190)*hk*s;o+=`<rect x="${f(x)}" y="${f(gy-h)}" width="${f(w)}" height="${f(h+2)}"/>`;
+const k=r();if(k<.25)o+=`<path d="M${f(x-4*s)},${f(gy-h)} L${f(x+w/2)},${f(gy-h-26*s)} L${f(x+w+4*s)},${f(gy-h)}Z"/>`;
+else if(k<.45){o+=`<rect x="${f(x+w/2-2*s)}" y="${f(gy-h-30*s)}" width="${f(4*s)}" height="${f(30*s)}"/><rect x="${f(x+w/2-9*s)}" y="${f(gy-h-22*s)}" width="${f(18*s)}" height="${f(3*s)}"/>`}
+else if(k<.6){const n=Math.max(2,Math.round(w/(7*s)));for(let q=0;q<n;q++)o+=`<rect x="${f(x+q*w/n)}" y="${f(gy-h-7*s)}" width="${f(w/n*.55)}" height="${f(7*s)}"/>`}
+if(li===3&&r()<.3){const aw=w*2.6;for(let q=0;q<3;q++){const ax=x+w+q*aw/3;o+=`<path d="M${f(ax)},${f(gy-h*.7)} h${f(aw/3)} v${f(h*.7+400*s)} h${f(-aw/12)} v${f(-h*.4-400*s)} a${f(aw/12)},${f(aw/12)} 0 0 0 ${f(-aw/6)},0 v${f(h*.4+400*s)} h${f(-aw/12)}Z"/>`}x+=aw}
+x+=w+(4+r()*40)*s}
+if(li===2){for(let q=0;q<W/(16*s)*.35;q++){const fx=r()*W;o+=`<rect x="${f(fx)}" y="${f(gy-46*s)}" width="${f(3*s)}" height="${f(60*s)}"/>`}}
+if(li===3&&opt.stairs){const sx=opt.stairs*W;for(let q=0;q<11;q++)o+=`<rect x="${f(sx+q*9*s)}" y="${f(gy-q*11*s)}" width="${f(110*s)}" height="${f(11*s+1)}"/>`;o+=`<path d="M${f(sx)},${f(gy-4*s)} L${f(sx+100*s)},${f(gy-114*s)}" stroke="${c}" stroke-width="${f(3*s)}"/>`}
+if(li===0&&opt.ring){const cx=opt.ring*W,cy=gy-160*s;o+=`<circle cx="${f(cx)}" cy="${f(cy)}" r="${f(14*s)}" fill="none" stroke="${lay[2][0]}" stroke-width="${f(5*s)}"/><rect x="${f(cx-1.5*s)}" y="${f(cy-60*s)}" width="${f(3*s)}" height="${f(46*s)}" fill="${lay[2][0]}"/>`}
+o+=`</g>`});return o}
+const ROUGH=`<filter id="fur" x="-6%" y="-6%" width="112%" height="112%"><feTurbulence type="fractalNoise" baseFrequency=".035 .06" numOctaves="4" seed="7"/><feDisplacementMap in="SourceGraphic" scale="18"/></filter><filter id="rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency=".05" numOctaves="3" seed="3"/><feDisplacementMap in="SourceGraphic" scale="7"/></filter><filter id="grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="5"/><feColorMatrix values="0 0 0 0 .06 0 0 0 0 .2 0 0 0 0 .1 0 0 0 .4 0"/><feComposite in2="SourceGraphic" operator="in"/></filter>`;
+/* hanging hexagon puzzle on wires */
+const hexPuzzle=(cx,cy,R,c,light)=>{let p='';for(let k=0;k<6;k++){const a=Math.PI/3*k+Math.PI/6;p+=(k?' L':'M')+f(cx+Math.cos(a)*R)+','+f(cy+Math.sin(a)*R)}
+return`<g><path d="M${f(cx-R*3.2)},${f(cy-R*2.6)} L${f(cx)},${f(cy-R)} L${f(cx+R*3.2)},${f(cy-R*2.6)}" stroke="${c}" stroke-width="${f(R*.06)}" fill="none"/><path d="${p}Z" fill="${c}"/><path d="${p}Z" fill="none" stroke="${light}" stroke-width="${f(R*.05)}" opacity=".5" transform="translate(${f(cx*.25)} ${f(cy*.25)}) scale(.75)"/><circle cx="${f(cx)}" cy="${f(cy)}" r="${f(R*.32)}" fill="none" stroke="${light}" stroke-width="${f(R*.08)}"/><circle cx="${f(cx)}" cy="${f(cy)}" r="${f(R*.1)}" fill="${light}"/>${[-1,1].map(d=>`<path d="M${f(cx+d*R*1.05)},${f(cy)} l${f(d*R*.35)},${f(-R*.2)} M${f(cx+d*R*1.05)},${f(cy)} l${f(d*R*.35)},${f(R*.2)}" stroke="${c}" stroke-width="${f(R*.07)}"/>`).join('')}</g>`};
+/* small figure reaching up (original pose), feet at (x,y) */
+const reacher=(x,y,s,c)=>`<g transform="translate(${x} ${y}) scale(${s})" fill="${c}"><ellipse cx="0" cy="-150" rx="15" ry="17"/><path d="M-12,-152 Q-4,-176 12,-166 Q18,-158 14,-146 Z"/><path d="M-20,-128 Q0,-136 20,-128 L26,-60 L30,0 L8,0 L4,-50 L-4,-50 L-8,0 L-30,0 L-26,-60 Z"/><path d="M12,-128 L32,-176 L40,-214 L48,-212 L42,-172 L24,-120 Z"/><path d="M-14,-126 L-30,-84 L-24,-80 L-8,-110 Z"/></g>`;
+/* a double-exposure panel */
+function panel({W,H,shapes,seed,base,scale,opt={},filter='rough',extra='',outside=''}){const id='p'+(UID++);
+return`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet"><defs>${grad(id+'s',H*.04,H*.96)}<mask id="${id}c" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><g fill="#fff" filter="url(#${filter})">${shapes}</g></mask></defs>${outside}
+<g><g mask="url(#${id}c)"><rect width="${W}" height="${H}" fill="url(#${id}s)"/><g fill="none" stroke="#F6FCE8" stroke-linecap="round" opacity=".35"><path d="M${f(W*.1)},${f(H*.2)} q${f(W*.2)},-${f(H*.03)} ${f(W*.42)},0 t${f(W*.4)},0" stroke-width="${f(W/90)}"/></g>${city(seed,W,base,scale,opt)}${extra}<rect width="${W}" height="${H}" fill="#000" filter="url(#grain)"/></g></g></svg>`}
+
+/* HERO: a sitting owl */
+(function(){const W=1000,H=1160;
+const owl=`<path d="M500,1062 C356,1062 262,1000 246,898 C230,800 240,700 262,622 C232,560 222,482 240,402 C250,344 270,292 300,252 L262,128 L364,206 C404,192 452,186 500,186 C548,186 596,192 636,206 L738,128 L700,252 C730,292 750,344 760,402 C778,482 768,560 738,622 C760,700 770,800 754,898 C738,1000 644,1062 500,1062 Z"/><path d="M420,1040 L452,1136 L486,1062 L500,1142 L514,1062 L548,1136 L580,1040 Z"/>`;
+let feathers='';const r=rnd(77);
+for(let k=0;k<0;k++){const side=k%2?1:-1,y=620+r()*400,x=side>0?748+r()*20:252-r()*20,l=40+r()*70;feathers+=`<path d="M${f(x)},${f(y)} q${f(side*l*.6)},${f(l*.2)} ${f(side*l)},${f(l*.7)}" stroke="#14522F" stroke-width="${f(3+r()*7)}" stroke-linecap="round" fill="none" opacity="${f(.55+r()*.45)}"/>`}
+for(let k=0;k<70;k++){const a=r()*Math.PI*2,d=1+Math.pow(r(),2)*.25;feathers+=`<circle cx="${f(500+Math.cos(a)*270*d)}" cy="${f(640+Math.sin(a)*430*d)}" r="${f(.8+r()*r()*4)}" fill="#1F7344" opacity="${f(.3+r()*.6)}"/>`}
+const eyes=`<g fill="none" stroke="#F1FAD9" opacity=".55"><circle cx="420" cy="350" r="62" stroke-width="5"/><circle cx="580" cy="350" r="62" stroke-width="5"/><circle cx="420" cy="350" r="84" stroke-width="2"/><circle cx="580" cy="350" r="84" stroke-width="2"/></g><path d="M500,370 L486,404 L500,428 L514,404 Z" fill="#F1FAD9" opacity=".45"/>`;
+const extra=eyes+hexPuzzle(500,640,56,'#1F6B3E','#D7EEA8')+reacher(560,1000,1.25,'#E2F3BE')+`<ellipse cx="560" cy="1004" rx="70" ry="8" fill="#0F3321" opacity=".5"/>`;
+document.getElementById('heroArt').innerHTML=panel({W,H,shapes:owl,seed:12,base:600,scale:1.1,opt:{stairs:.66,ring:.27},filter:'fur',extra,outside:feathers}).replace('<defs>','<defs>'+ROUGH)})();
+
+/* feathered dividers: brush strokes of A sweeping into B */
+document.querySelectorAll('.fe').forEach((el,i)=>{const A=el.dataset.a,B=el.dataset.b,r=rnd(41+i*19);el.style.background=B;let o=`<rect width="1440" height="14" fill="${A}"/>`;
+for(let x=-20;x<1460;x+=6+r()*14){const l=10+Math.pow(r(),1.8)*80,w=3+r()*10,lean=(r()-.5)*30;o+=`<path d="M${f(x)},10 q${f(lean*.3)},${f(l*.5)} ${f(lean)},${f(l)} l${f(w*.3)},0 q${f(-lean*.2)},${f(-l*.5)} ${f(w-lean*.1)},${f(-l)} Z" fill="${A}" opacity="${f(.6+r()*.4)}"/>`}
+el.innerHTML=`<svg viewBox="0 0 1440 100" preserveAspectRatio="none" aria-hidden="true">${o}</svg>`});
+
+/* II five stages × three cases */
+const CASES=[{n:'Підтримка відповідає дедалі повільніше, клієнти незадоволені.',s:['Середній час першої відповіді зріс з 2 до 9 годин за квартал.','Розклали за каналами: пошта 14 годин, чат 1 година. Проблема в пошті.','Листи падають у загальну чергу й чекають ручного розподілу.','Автомаршрутизація за темою: великий вплив, тиждень роботи.','Через 2 тижні 3 години. Ціль 2 години, далі шаблони відповідей.']},
+{n:'Релізи постійно виходять пізніше, ніж обіцяли.',s:['4 з 6 останніх релізів вийшли із запізненням понад 3 дні.','Розклали за етапами: розробка вчасно, затримка на тестуванні.','Тестове середовище одне на три команди, черга до нього 2 дні.','Окреме середовище для кожної команди замість нових тестувальників.','Наступні 3 релізи вчасно. Перевіряємо ще місяць, перш ніж закріпити.']},
+{n:'Нові клієнти йдуть у перші два місяці.',s:['За пів року відтік у перші 60 днів зріс з 8% до 15%.','Розклали за тарифами: зростання лише на базовому тарифі.','Базові клієнти не проходять налаштування і не бачать цінності.','Покроковий онбординг у продукті замість знижок.','Когорта після запуску: відтік 10%. Тестуємо лист на 7-й день.']}];
+const STG=[['Визначити','формула «що, де, скільки»'],['Розкласти','дерево проблеми'],['Знайти корінь','5 Чому, Ішикава'],['Обрати рішення','вплив — зусилля'],['Перевірити','PDCA, ті самі метрики']];
+const stgShape=[
+`<circle cx="180" cy="170" r="110"/><path d="M252,250 L282,224 L380,330 L346,360 Z"/>`,
+`<path d="M200,40 L318,108 L318,244 L200,312 L82,244 L82,108 Z"/><path d="M200,320 L200,380" stroke="#000" stroke-width="14"/>`,
+`<path d="M200,40 C120,40 80,100 90,160 C60,180 60,230 100,240 L180,240 L180,300 C140,320 100,350 70,390 L110,390 C140,360 170,340 190,334 L190,390 L210,390 L210,334 C230,340 260,360 290,390 L330,390 C300,350 260,320 220,300 L220,240 L300,240 C340,230 340,180 310,160 C320,100 280,40 200,40 Z"/>`,
+`<path d="M90,390 L90,170 C90,96 140,46 200,46 C260,46 310,96 310,170 L310,390 Z"/>`,
+`<path d="M200,40 C122,40 80,100 80,160 C80,210 112,238 134,264 C150,282 152,300 152,318 L248,318 C248,300 250,282 266,264 C288,238 320,210 320,160 C320,100 278,40 200,40 Z"/><rect x="156" y="328" width="88" height="20" rx="6"/><rect x="166" y="356" width="68" height="18" rx="6"/>`];
+const stages=document.getElementById('stages'),note=document.getElementById('note');
+stages.innerHTML=STG.map(([n,t],i)=>`<article class="stg"><div class="top" aria-hidden="true">${panel({W:400,H:400,shapes:stgShape[i],seed:60+i*9,base:230,scale:.55,opt:{stairs:i===3?.4:0,ring:i===1?.5:0},extra:i===2?hexPuzzle(200,140,26,'#1F6B3E','#D7EEA8'):''})}</div><div class="body"><span class="n">Крок ${i+1}</span><h3>${n}</h3><span class="tool">${t}</span><p class="c"></p></div></article>`).join('');
+const rm=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function fill(l){stages.querySelectorAll('p.c').forEach((p,i)=>p.textContent=CASES[l].s[i]);note.textContent=CASES[l].n}
+function setL(l){document.querySelectorAll('#lvls button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.l===l));const ps=stages.querySelectorAll('p.c');ps.forEach(p=>p.classList.add('fade'));setTimeout(()=>{fill(l);ps.forEach(p=>p.classList.remove('fade'))},rm?0:180)}
+document.getElementById('lvls').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setL(+b.dataset.l)});
+fill(0);
+
+/* III five whys: each answer becomes a deeper, darker step */
+const WHY=['Клієнт отримав замовлення на 5 днів пізніше обіцяного.','Склад відвантажив товар із затримкою.','Товару не було в наявності на складі.','Закупівля не замовила його вчасно.','Звіт про залишки оновлюють вручну раз на тиждень.','Ніхто не відповідає за автоматизацію звіту. Це корінь: його можна змінити процесом.'];
+const WC=['#D7EEA8','#B6DE8E','#8FCB74','#4FA45E','#1F7344','#0F3321'],WT=['#10291B','#10291B','#10291B','#E9F5DF','#E9F5DF','#E9F5DF'];
+const why=document.getElementById('why'),wn=document.getElementById('whyNext'),wr=document.getElementById('whyReset'),wnote=document.getElementById('whyNote');let wi=0;
+why.innerHTML=WHY.map((t,i)=>`<div class="wst" style="min-height:${150+i*44}px"><b>${i?'Чому '+i:'Симптом'}</b><p>${t}</p></div>`).join('');
+const wsts=[...why.children];
+function wdraw(){wsts.forEach((el,i)=>{const on=i<=wi;el.classList.toggle('off',!on);el.style.background=on?WC[i]:'';el.style.color=on?WT[i]:'';el.querySelector('p').textContent=on?WHY[i]:'?'});
+wn.disabled=wi>=WHY.length-1;wnote.textContent=wi>=WHY.length-1?'Корінь знайдено за 5 кроків':`Крок ${wi} з 5`}
+wn.addEventListener('click',()=>{if(wi<WHY.length-1){wi++;wdraw()}});wr.addEventListener('click',()=>{wi=0;wdraw()});wdraw();
+
+/* IV Ishikawa diagram */
+(function(){const C=[['Люди',['Новачки без навчання','Відпустки в пік']],['Процеси',['Ручна маршрутизація','3 рівні ескалації']],['Інструменти',['Повільна база знань','Немає шаблонів']],['Дані',['Неповна історія клієнта','Дублікати звернень']],['Середовище',['Сезонний пік запитів','Реліз без анонсу']],['Вимірювання',['Немає метрики черги','SLA лише в робочі год']]];
+const xs=[260,520,780],sy=230;let o=`<path d="M40,${sy} L930,${sy}" stroke="#0F3321" stroke-width="6" stroke-linecap="round"/><path d="M40,${sy-40} L70,${sy} L40,${sy+40} Z" fill="#0F3321"/>`;
+o+=`<rect x="938" y="170" width="200" height="120" rx="10" fill="#0F3321"/><text x="1038" y="212" text-anchor="middle" font-family="Unbounded,system-ui,sans-serif" font-weight="800" font-size="15" fill="#E9F5DF">ЧАС ВІДПОВІДІ</text><text x="1038" y="238" text-anchor="middle" font-family="IBM Plex Sans,system-ui,sans-serif" font-size="15" fill="#A8D884">перша відповідь</text><text x="1038" y="266" text-anchor="middle" font-family="JetBrains Mono,monospace" font-weight="700" font-size="17" fill="#D7EEA8">2 → 9 год</text>`;
+C.forEach(([n,cs],i)=>{const top=i<3,x=xs[i%3],ey=top?62:398,ex=x-160;o+=`<path d="M${x},${sy} L${ex},${ey}" stroke="#3A9A55" stroke-width="4" stroke-linecap="round"/>`;
+o+=`<text x="${ex}" y="${top?ey-14:ey+28}" text-anchor="middle" font-family="Unbounded,system-ui,sans-serif" font-weight="800" font-size="15" fill="#14522F">${n.toUpperCase()}</text>`;
+cs.forEach((t,k)=>{const tt=k?.72:.38,px=x+(ex-x)*tt,py=sy+(ey-sy)*tt;o+=`<circle cx="${f(px)}" cy="${f(py)}" r="5" fill="#6DBD6A"/><path d="M${f(px)},${f(py)} L${f(px+16)},${f(py)}" stroke="#6DBD6A" stroke-width="2"/><text x="${f(px+22)}" y="${f(py+5)}" font-family="IBM Plex Sans,system-ui,sans-serif" font-size="15" fill="#10291B">${t}</text>`})});
+document.getElementById('fish').innerHTML=`<svg viewBox="0 0 1150 440" aria-hidden="true">${o}</svg>`})();
+
+/* VII quiz */
+const QZ=[{q:'Керівник каже: «У нас проблема з мотивацією команди». Що зробите першим?',o:['Запущу програму бонусів','Попрошу конкретні факти: що саме змінилось і з якого моменту','Проведу тімбілдинг'],a:1,e:'«Мотивація» тут діагноз, а не факт. Спершу з’ясуйте, що саме видно: зірвані терміни, звільнення, менше ініціатив. Від цього залежить рішення.'},
+{q:'На третьому «Чому?» звучить відповідь: «бо Олег неуважний». Що далі?',o:['Зупинитися, причину знайдено','Спитати, чому процес дозволив цю помилку','Поговорити з Олегом про уважність'],a:1,e:'Корінь майже ніколи не в людині. Якщо помилку може зробити будь-хто, шукайте, чого бракує процесу: перевірки, чек-листа, автоматизації.'},
+{q:'Є шість ідей рішення, а ресурсів вистачає на одну. Як обрати?',o:['Ту, яку запропонував керівник','Оцінити кожну за впливом і зусиллями та почати зі швидкої перемоги','Найдешевшу'],a:1,e:'Матриця «вплив — зусилля» дає спільну мову для вибору. Найдешевша ідея може бути дрібницею, а ідея керівника може виявитися пасткою.'}];
+const quiz=document.getElementById('quiz'),score=document.getElementById('score');let done=0,right=0;
+quiz.innerHTML=QZ.map((x,i)=>`<div class="qz" data-i="${i}"><p class="qn">Ситуація ${i+1}</p><h3>${x.q}</h3><div class="opts" role="group" aria-label="Варіанти відповіді">${x.o.map((t,j)=>`<button type="button" class="opt" id="q${i}o${j}" data-j="${j}">${t}</button>`).join('')}</div><p class="fb" aria-live="polite"></p></div>`).join('');
+quiz.addEventListener('click',e=>{const b=e.target.closest('.opt');if(!b)return;const card=b.closest('.qz');if(card.dataset.done)return;
+const i=+card.dataset.i,j=+b.dataset.j,x=QZ[i];card.dataset.done=1;done++;if(j===x.a)right++;
+card.querySelectorAll('.opt').forEach((o,k)=>{if(k===x.a)o.classList.add('ok');else if(k===j)o.classList.add('no');o.setAttribute('aria-disabled','true')});
+card.querySelector('.fb').textContent=(j===x.a?'Так. ':'Краще інакше. ')+x.e;score.textContent=done<3?`Відповідей: ${done} з 3`:`Результат: ${right} з 3 правильних`});
+
+/* closing: the figure under the solved puzzle */
+document.getElementById('endFig').innerHTML=panel({W:400,H:460,shapes:`<path d="M200,30 C120,30 70,90 70,170 L70,440 L330,440 L330,170 C330,90 280,30 200,30 Z"/>`,seed:220,base:250,scale:.55,opt:{ring:.25},extra:hexPuzzle(200,170,34,'#1F6B3E','#D7EEA8')+reacher(220,420,.85,'#E2F3BE')});
+</script>
